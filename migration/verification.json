@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "original_sources_verified": 210,
+  "archived_source_files": 130,
+  "source_archives": [
+    {
+      "name": "pre-migration-source.zip",
+      "sha256": "b6cab37ad49040087ec72cb85cc08edf338e08d0698c882a77617f7a1c19d1a5"
+    },
+    {
+      "name": "supplement-1.zip",
+      "sha256": "420c578431a4d509a595ec974f34ca44e1fa0e65bda0600a0e1b71b5fde68062"
+    }
+  ],
+  "regressions": {
+    "helper": {
+      "receipt": "diagnostics/offline-regressions-20261023/run-bc7caf161ece/result.json",
+      "tests": 1428,
+      "source_files": 492,
+      "current_source_matches": true
+    },
+    "insights": {
+      "receipt": "diagnostics/offline-tests/run-c1051ab1207a/result.json",
+      "tests": 204,
+      "source_files": 165,
+      "current_source_matches": true
+    }
+  },
+  "test_preservation": {
+    "before": 1623,
+    "after": 1632,
+    "missing_original_ids": [],
+    "duplicate_ids": [],
+    "new_cases": [
+      "test_project_boundary.ProjectBoundaryTests.test_cli_entry_without_helper_import_path",
+      "test_project_boundary.ProjectBoundaryTests.test_historical_inputs_are_explicit_and_outputs_cannot_write_history",
+      "test_project_boundary.ProjectBoundaryTests.test_history_configuration_is_read_only_and_never_creates_roots",
+      "test_project_boundary.ProjectBoundaryTests.test_idle_analysis_window_does_not_start_parser",
+      "test_project_boundary.ProjectBoundaryTests.test_invalid_history_configurations_are_rejected",
+      "test_project_boundary.ProjectBoundaryTests.test_missing_history_configuration_is_optional",
+      "test_project_boundary.ProjectBoundaryTests.test_nested_minimap_paths_resolve_to_analysis_repository",
+      "test_project_boundary.ProjectBoundaryTests.test_no_helper_import_or_capture_dependency_in_analysis_package",
+      "test_project_boundary.ProjectBoundaryTests.test_sibling_tools_bootstrap_without_inheriting_the_tools_directory"
+    ]
+  },
+  "cli_help_in_isolated_python": {
+    "tools": 60,
+    "failures": 0,
+    "source_bound_receipt": "diagnostics/migration-cli-help-final.json"
+  },
+  "existing_archive_smoke": {
+    "match_id": "9044645010",
+    "report_sha256": "ad8325f5f64b4bfbb939d36ae46fd38eb653f23102ff43b2b272d8d9f44c0e02",
+    "identical_report_fields": [
+      "streams",
+      "death_semantics",
+      "hero_facts",
+      "end_evidence"
+    ],
+    "new_dem_parse": false
+  },
+  "adapted_after_initial_export": [
+    "dota2_insights/minimap/settings.py",
+    "tools/analyze_match_audio.py",
+    "tools/prepare_replay_item_audit.py",
+    "tools/review_own_wards.py",
+    "tools/review_replay_audio.py",
+    "tools/review_replay_last_visible_inventory.py",
+    "tools/review_audio_listening.py",
+    "tools/prepare_match_audio_review.py"
+  ],
+  "diff_check": {
+    "helper": true,
+    "insights": true
+  },
+  "history_payloads_moved_or_deleted": false,
+  "remote_pi_modified": false,
+  "new_exe_built": false,
+  "committed_or_pushed": false,
+  "publication_state_scope": "Pre-commit verification snapshot, not live Git status."
+}

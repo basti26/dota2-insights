@@ -1,0 +1,27 @@
+{
+  "retained_modules": [
+    "dota2_economy.ability_sound_matcher",
+    "dota2_economy.hero_identity",
+    "dota2_economy.portable_replay",
+    "dota2_economy.recording_metadata",
+    "dota2_economy.replay_archive",
+    "dota2_economy.replay_death_semantics",
+    "dota2_economy.replay_holdout",
+    "dota2_economy.replay_phase_evidence",
+    "dota2_economy.replay_visibility_recording",
+    "dota2_economy.scrollable_panel",
+    "dota2_economy.ward_validation",
+    "dota2_minimap.dataset",
+    "dota2_minimap.offline_io",
+    "dota2_minimap.replay_alignment",
+    "dota2_minimap.replay_baselines",
+    "dota2_minimap.replay_visibility_windows",
+    "dota2_minimap.settings",
+    "dota2_minimap.static_map_calibration",
+    "dota2_minimap.visibility_time_audit",
+    "tools.evaluate_replay_baselines"
+  ],
+  "reason": "still used by capture/download or remaining helper checks; snapshots only, no cross-repository imports",
+  "analysis_owner": "basti26/dota2-insights",
+  "helper_archive_manifest_sha256": "5819c263b1a70d4614c758c5e8839121f8bca10c4d70c61cdf8261d4d180cfad"
+}

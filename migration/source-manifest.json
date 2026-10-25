@@ -1,0 +1,1507 @@
+{
+  "schema_version": 1,
+  "source_repository": "basti26/dota2-helper",
+  "source_head": "0cded9f1f8f16aece310ddae44e0cf6d7f98600b",
+  "source_worktree_dirty": true,
+  "source_is_worktree_not_head": true,
+  "transformations": [
+    "rename package imports/patch targets",
+    "extract pure hero catalog",
+    "use public holdout guard instead of recorder import"
+  ],
+  "files": [
+    {
+      "source": "dota2_economy/ability_sound_matcher.py",
+      "target": "dota2_insights/ability_sound_matcher.py",
+      "source_sha256": "87f4db3a2e03a2f413885f843483050d006f5db45e293cc4fed68d1bbd845273",
+      "export_sha256": "87f4db3a2e03a2f413885f843483050d006f5db45e293cc4fed68d1bbd845273",
+      "bytes": 11080
+    },
+    {
+      "source": "dota2_economy/hero_identity.py",
+      "target": "dota2_insights/hero_identity.py",
+      "source_sha256": "0ac367434e8fb06a099f4034182c0c1379b974ad95f05eeec21765be34d3719a",
+      "export_sha256": "6a99bd5d9de93152df3642d999c5f242745758af294b2e386a45882910dc2778",
+      "bytes": 7567
+    },
+    {
+      "source": "dota2_economy/map_holdout.py",
+      "target": "dota2_insights/map_holdout.py",
+      "source_sha256": "991650c1f26a7e60a3b667c8504a258b980b1710fc7849aa7f570f39985ced4b",
+      "export_sha256": "b4241e12da7d5b544a6d2e300d6b21529c29993fc791f46db1cd55dfe687cbbf",
+      "bytes": 19905
+    },
+    {
+      "source": "dota2_economy/map_holdout_view.py",
+      "target": "dota2_insights/map_holdout_view.py",
+      "source_sha256": "c623763e3e6bbfe19dfbaa035ecdf79e586f1546ccffce3d2f9bde63f2336a85",
+      "export_sha256": "c623763e3e6bbfe19dfbaa035ecdf79e586f1546ccffce3d2f9bde63f2336a85",
+      "bytes": 5511
+    },
+    {
+      "source": "dota2_economy/mixture_sound_matcher.py",
+      "target": "dota2_insights/mixture_sound_matcher.py",
+      "source_sha256": "fbb13ff16e566399ac8a1ceb61c64fe5fd4fdf661e4aa475c9c05851d40df766",
+      "export_sha256": "fbb13ff16e566399ac8a1ceb61c64fe5fd4fdf661e4aa475c9c05851d40df766",
+      "bytes": 8954
+    },
+    {
+      "source": "dota2_economy/portable_replay.py",
+      "target": "dota2_insights/portable_replay.py",
+      "source_sha256": "45e2cc2b4911688451781c1c582ad16171df79eb279b2afb685644388e388aba",
+      "export_sha256": "45e2cc2b4911688451781c1c582ad16171df79eb279b2afb685644388e388aba",
+      "bytes": 1634
+    },
+    {
+      "source": "dota2_economy/postgame_building_geometry.py",
+      "target": "dota2_insights/postgame_building_geometry.py",
+      "source_sha256": "68c3fb3958eff781adb7ea73b588a62951e77933e8b081ef7584ef3ec98c437e",
+      "export_sha256": "68c3fb3958eff781adb7ea73b588a62951e77933e8b081ef7584ef3ec98c437e",
+      "bytes": 15195
+    },
+    {
+      "source": "dota2_economy/postgame_capture_review.py",
+      "target": "dota2_insights/postgame_capture_review.py",
+      "source_sha256": "253f71bfcf3904ad54ff33b83a6597b580eb1c2d97a405e38753da8ad87319b2",
+      "export_sha256": "253f71bfcf3904ad54ff33b83a6597b580eb1c2d97a405e38753da8ad87319b2",
+      "bytes": 8223
+    },
+    {
+      "source": "dota2_economy/postgame_context_cohort.py",
+      "target": "dota2_insights/postgame_context_cohort.py",
+      "source_sha256": "433cf8cfa12f3d44feadae895ae9c59b200d8eb52bf3f09a229b885b4bee93fb",
+      "export_sha256": "433cf8cfa12f3d44feadae895ae9c59b200d8eb52bf3f09a229b885b4bee93fb",
+      "bytes": 1465
+    },
+    {
+      "source": "dota2_economy/postgame_context_store.py",
+      "target": "dota2_insights/postgame_context_store.py",
+      "source_sha256": "5fe0fe61e6e863d994577f2a4b6da6ec282868ecef42d0d82c96b0aa140df32a",
+      "export_sha256": "5fe0fe61e6e863d994577f2a4b6da6ec282868ecef42d0d82c96b0aa140df32a",
+      "bytes": 12902
+    },
+    {
+      "source": "dota2_economy/postgame_event_types.py",
+      "target": "dota2_insights/postgame_event_types.py",
+      "source_sha256": "392d9afa8894b779f128f38eacc272bdeb8b3c52440c28958b701233e5a74cf3",
+      "export_sha256": "392d9afa8894b779f128f38eacc272bdeb8b3c52440c28958b701233e5a74cf3",
+      "bytes": 1106
+    },
+    {
+      "source": "dota2_economy/postgame_evidence_store.py",
+      "target": "dota2_insights/postgame_evidence_store.py",
+      "source_sha256": "f2123e3afbb3a8326e1373abbd7a2bf153703ef2f5056c2905e859092affa863",
+      "export_sha256": "f2123e3afbb3a8326e1373abbd7a2bf153703ef2f5056c2905e859092affa863",
+      "bytes": 30891
+    },
+    {
+      "source": "dota2_economy/postgame_legacy_context.py",
+      "target": "dota2_insights/postgame_legacy_context.py",
+      "source_sha256": "cbc0f36228c43a1d82ce3e9ee699a8d513deea054e8c20ad04545b42c61128b1",
+      "export_sha256": "cbc0f36228c43a1d82ce3e9ee699a8d513deea054e8c20ad04545b42c61128b1",
+      "bytes": 2925
+    },
+    {
+      "source": "dota2_economy/postgame_metadata_store.py",
+      "target": "dota2_insights/postgame_metadata_store.py",
+      "source_sha256": "5d73f4664e83e1cd68eb6ee717c973a3d7a9302a6427fc1b8e0da35f142b4ba9",
+      "export_sha256": "5d73f4664e83e1cd68eb6ee717c973a3d7a9302a6427fc1b8e0da35f142b4ba9",
+      "bytes": 21455
+    },
+    {
+      "source": "dota2_economy/postgame_replay_context.py",
+      "target": "dota2_insights/postgame_replay_context.py",
+      "source_sha256": "5708deb82ac673b84cf128bcddfb16d831e001d82bd41fdea03a6d460209f154",
+      "export_sha256": "5708deb82ac673b84cf128bcddfb16d831e001d82bd41fdea03a6d460209f154",
+      "bytes": 6231
+    },
+    {
+      "source": "dota2_economy/postgame_store.py",
+      "target": "dota2_insights/postgame_store.py",
+      "source_sha256": "a47b02d8ab2adc22cd92a99db7bd175df9c7d56f2009b4b91b4e3bb16b260f31",
+      "export_sha256": "a47b02d8ab2adc22cd92a99db7bd175df9c7d56f2009b4b91b4e3bb16b260f31",
+      "bytes": 20200
+    },
+    {
+      "source": "dota2_economy/postgame_target_names.py",
+      "target": "dota2_insights/postgame_target_names.py",
+      "source_sha256": "c3e08bd7ced22d7a4a38348cfba39cf1f18102c76a4c500ba4028c0de0911437",
+      "export_sha256": "c3e08bd7ced22d7a4a38348cfba39cf1f18102c76a4c500ba4028c0de0911437",
+      "bytes": 1711
+    },
+    {
+      "source": "dota2_economy/replay_archive.py",
+      "target": "dota2_insights/replay_archive.py",
+      "source_sha256": "7f1a0e5b99c76f6bb5f82e8fe4d82740138175331b1f1311b951655707cccaf0",
+      "export_sha256": "7f1a0e5b99c76f6bb5f82e8fe4d82740138175331b1f1311b951655707cccaf0",
+      "bytes": 34995
+    },
+    {
+      "source": "dota2_economy/replay_building_landmarks.py",
+      "target": "dota2_insights/replay_building_landmarks.py",
+      "source_sha256": "2c2e3492ba27e8a9522d779271653e6c6e9140cf1e853fef77ee30ff0232770d",
+      "export_sha256": "2c2e3492ba27e8a9522d779271653e6c6e9140cf1e853fef77ee30ff0232770d",
+      "bytes": 5094
+    },
+    {
+      "source": "dota2_economy/replay_death_semantics.py",
+      "target": "dota2_insights/replay_death_semantics.py",
+      "source_sha256": "ba265c99fe39e7908243cd5c6585903219efcac3d9b921fb76d015596ab0ad93",
+      "export_sha256": "ba265c99fe39e7908243cd5c6585903219efcac3d9b921fb76d015596ab0ad93",
+      "bytes": 12194
+    },
+    {
+      "source": "dota2_economy/replay_economy_review.py",
+      "target": "dota2_insights/replay_economy_review.py",
+      "source_sha256": "78ead0ea1219f7be30f1fc339018377708af16e0270bfebfd50c7702d2f794c3",
+      "export_sha256": "78ead0ea1219f7be30f1fc339018377708af16e0270bfebfd50c7702d2f794c3",
+      "bytes": 13356
+    },
+    {
+      "source": "dota2_economy/replay_fact_review.py",
+      "target": "dota2_insights/replay_fact_review.py",
+      "source_sha256": "a2525be837ba358a6e0c562946b9be250f0d161383a532889e7967cfc12d77da",
+      "export_sha256": "a2525be837ba358a6e0c562946b9be250f0d161383a532889e7967cfc12d77da",
+      "bytes": 23449
+    },
+    {
+      "source": "dota2_economy/replay_holdout.py",
+      "target": "dota2_insights/replay_holdout.py",
+      "source_sha256": "8dba87561e07ea3b4ca28ca4caa9da7ac43f9af3e2b9c8521a2f7786a78414ec",
+      "export_sha256": "8dba87561e07ea3b4ca28ca4caa9da7ac43f9af3e2b9c8521a2f7786a78414ec",
+      "bytes": 1899
+    },
+    {
+      "source": "dota2_economy/replay_landmarks.py",
+      "target": "dota2_insights/replay_landmarks.py",
+      "source_sha256": "62fe37e5c8e45c7b3ceda314998d84194f92a1ec07514fe77aefb06dfa3c5c5f",
+      "export_sha256": "62fe37e5c8e45c7b3ceda314998d84194f92a1ec07514fe77aefb06dfa3c5c5f",
+      "bytes": 5263
+    },
+    {
+      "source": "dota2_economy/replay_metadata_probe.py",
+      "target": "dota2_insights/replay_metadata_probe.py",
+      "source_sha256": "c36e59a4083ea0fe6b2958c3bf7073076767ab461971a865b7337d2249aa2e4c",
+      "export_sha256": "c36e59a4083ea0fe6b2958c3bf7073076767ab461971a865b7337d2249aa2e4c",
+      "bytes": 8515
+    },
+    {
+      "source": "dota2_economy/replay_periods.py",
+      "target": "dota2_insights/replay_periods.py",
+      "source_sha256": "db01965aabd0013d376c7cda3402caf888281be563888963a18dbb61ce746095",
+      "export_sha256": "db01965aabd0013d376c7cda3402caf888281be563888963a18dbb61ce746095",
+      "bytes": 30314
+    },
+    {
+      "source": "dota2_economy/replay_phase_evidence.py",
+      "target": "dota2_insights/replay_phase_evidence.py",
+      "source_sha256": "2c7742bdd060574e57aefabbd2fb5b8cadfa56d3426f3868773161cd02622592",
+      "export_sha256": "2c7742bdd060574e57aefabbd2fb5b8cadfa56d3426f3868773161cd02622592",
+      "bytes": 9805
+    },
+    {
+      "source": "dota2_economy/replay_postgame_context.py",
+      "target": "dota2_insights/replay_postgame_context.py",
+      "source_sha256": "7ba3648f1aacd7c2f9c9813131ae9009bb73a8c08c8ddff15dfea16432492d3a",
+      "export_sha256": "7ba3648f1aacd7c2f9c9813131ae9009bb73a8c08c8ddff15dfea16432492d3a",
+      "bytes": 16320
+    },
+    {
+      "source": "dota2_economy/replay_runtime.py",
+      "target": "dota2_insights/replay_runtime.py",
+      "source_sha256": "a65149527941d94472f6e0960c23e9b6a032048e89976f198c07afa316d7ea7c",
+      "export_sha256": "a65149527941d94472f6e0960c23e9b6a032048e89976f198c07afa316d7ea7c",
+      "bytes": 2786
+    },
+    {
+      "source": "dota2_economy/replay_visibility_recording.py",
+      "target": "dota2_insights/replay_visibility_recording.py",
+      "source_sha256": "6838b9489c9adf455098ff0609985218923063968273dd80284f53b16032bf6c",
+      "export_sha256": "6838b9489c9adf455098ff0609985218923063968273dd80284f53b16032bf6c",
+      "bytes": 5663
+    },
+    {
+      "source": "dota2_economy/replay_workbench.py",
+      "target": "dota2_insights/replay_workbench.py",
+      "source_sha256": "f74b50c80522043aab093e2848b72281ed318ae384faeecfb808cce3b0ed81ec",
+      "export_sha256": "f74b50c80522043aab093e2848b72281ed318ae384faeecfb808cce3b0ed81ec",
+      "bytes": 15704
+    },
+    {
+      "source": "dota2_economy/scrollable_panel.py",
+      "target": "dota2_insights/scrollable_panel.py",
+      "source_sha256": "474a5e918f43d5a347423be3ec4a872ca7497ee1c4c2cd2c80de7302d14e7348",
+      "export_sha256": "474a5e918f43d5a347423be3ec4a872ca7497ee1c4c2cd2c80de7302d14e7348",
+      "bytes": 2794
+    },
+    {
+      "source": "dota2_economy/ward_building_regions.py",
+      "target": "dota2_insights/ward_building_regions.py",
+      "source_sha256": "9be62432a10dbcee938830acb40cb82a3e45cb974f43b750ff99fa02a75e493e",
+      "export_sha256": "9be62432a10dbcee938830acb40cb82a3e45cb974f43b750ff99fa02a75e493e",
+      "bytes": 14593
+    },
+    {
+      "source": "dota2_economy/ward_clock_alignment.py",
+      "target": "dota2_insights/ward_clock_alignment.py",
+      "source_sha256": "5f99d4daa029bab82c84e8ca289e1f28d012f2434264dd0bae23d8df75d81dd0",
+      "export_sha256": "5f99d4daa029bab82c84e8ca289e1f28d012f2434264dd0bae23d8df75d81dd0",
+      "bytes": 17788
+    },
+    {
+      "source": "dota2_economy/ward_cohort_trajectories.py",
+      "target": "dota2_insights/ward_cohort_trajectories.py",
+      "source_sha256": "437de6b77c3a32dd233bf6bdc84836c513495ba094be761e6db2be018b24b9e9",
+      "export_sha256": "437de6b77c3a32dd233bf6bdc84836c513495ba094be761e6db2be018b24b9e9",
+      "bytes": 25906
+    },
+    {
+      "source": "dota2_economy/ward_context_balance.py",
+      "target": "dota2_insights/ward_context_balance.py",
+      "source_sha256": "45338b1b575e71a8fdc56e661a7bb0e0400f6adf5705e82b96893a320214d835",
+      "export_sha256": "45338b1b575e71a8fdc56e661a7bb0e0400f6adf5705e82b96893a320214d835",
+      "bytes": 16647
+    },
+    {
+      "source": "dota2_economy/ward_control_regions.py",
+      "target": "dota2_insights/ward_control_regions.py",
+      "source_sha256": "bcb403fcbf1eacb3ef43f851b03d4b1d1a73b65f215860d500fa62e34e8fe163",
+      "export_sha256": "bcb403fcbf1eacb3ef43f851b03d4b1d1a73b65f215860d500fa62e34e8fe163",
+      "bytes": 24100
+    },
+    {
+      "source": "dota2_economy/ward_event_windows.py",
+      "target": "dota2_insights/ward_event_windows.py",
+      "source_sha256": "8ee56c0e80ef92135cb487e66220d991d55a2632fdaba632c93830b4857f6951",
+      "export_sha256": "8ee56c0e80ef92135cb487e66220d991d55a2632fdaba632c93830b4857f6951",
+      "bytes": 27450
+    },
+    {
+      "source": "dota2_economy/ward_interval_context.py",
+      "target": "dota2_insights/ward_interval_context.py",
+      "source_sha256": "db983120cf84a7678a129b6b8b3e831043aef5c52ba8f4e49b783509337c80b2",
+      "export_sha256": "db983120cf84a7678a129b6b8b3e831043aef5c52ba8f4e49b783509337c80b2",
+      "bytes": 18495
+    },
+    {
+      "source": "dota2_economy/ward_interval_phases.py",
+      "target": "dota2_insights/ward_interval_phases.py",
+      "source_sha256": "20b8be5b6b8c9ee17532067bf005c4069e013a8c464c923b20c4688d5399bfc0",
+      "export_sha256": "20b8be5b6b8c9ee17532067bf005c4069e013a8c464c923b20c4688d5399bfc0",
+      "bytes": 23297
+    },
+    {
+      "source": "dota2_economy/ward_objective_opportunities.py",
+      "target": "dota2_insights/ward_objective_opportunities.py",
+      "source_sha256": "dbbf672b4c732d30cf21d423d9d78d58188dc94901675dc34a45478d3c9fe3d4",
+      "export_sha256": "dbbf672b4c732d30cf21d423d9d78d58188dc94901675dc34a45478d3c9fe3d4",
+      "bytes": 22749
+    },
+    {
+      "source": "dota2_economy/ward_objective_regions.py",
+      "target": "dota2_insights/ward_objective_regions.py",
+      "source_sha256": "91e699b42d3a2d5a9af4638ab0b62f945f260561e147f9e1cc5bc07b4a791b6e",
+      "export_sha256": "91e699b42d3a2d5a9af4638ab0b62f945f260561e147f9e1cc5bc07b4a791b6e",
+      "bytes": 22674
+    },
+    {
+      "source": "dota2_economy/ward_observation_check.py",
+      "target": "dota2_insights/ward_observation_check.py",
+      "source_sha256": "78a28c3c8b1ccae8d14d9513297c3ae824a2231bf20a89845a70bb91dd740f40",
+      "export_sha256": "52f67d20032dcf34b3dea825c0b71077aa1035ea8df5b86567e2935fae38b8f9",
+      "bytes": 10837
+    },
+    {
+      "source": "dota2_economy/ward_patterns.py",
+      "target": "dota2_insights/ward_patterns.py",
+      "source_sha256": "1ef994db102093dacd54b5dd3c8b8c171ba574d34086037f521d40aaa8a70d26",
+      "export_sha256": "1ef994db102093dacd54b5dd3c8b8c171ba574d34086037f521d40aaa8a70d26",
+      "bytes": 23247
+    },
+    {
+      "source": "dota2_economy/ward_phase_context.py",
+      "target": "dota2_insights/ward_phase_context.py",
+      "source_sha256": "37b1dbf0a7649dd06de17ffbec158011f224bbfad26b0e37c15f2358a7942adf",
+      "export_sha256": "37b1dbf0a7649dd06de17ffbec158011f224bbfad26b0e37c15f2358a7942adf",
+      "bytes": 12763
+    },
+    {
+      "source": "dota2_economy/ward_placement_sequences.py",
+      "target": "dota2_insights/ward_placement_sequences.py",
+      "source_sha256": "611702332cd5557748777120a0fd8ef07439d70a88e862c376ededd8039edc62",
+      "export_sha256": "611702332cd5557748777120a0fd8ef07439d70a88e862c376ededd8039edc62",
+      "bytes": 7304
+    },
+    {
+      "source": "dota2_economy/ward_region_stability.py",
+      "target": "dota2_insights/ward_region_stability.py",
+      "source_sha256": "03ff6e70e8ebbad79dcfcd6fecf6a932342a7ac83f70fbd6446887b5c8676b95",
+      "export_sha256": "03ff6e70e8ebbad79dcfcd6fecf6a932342a7ac83f70fbd6446887b5c8676b95",
+      "bytes": 18609
+    },
+    {
+      "source": "dota2_economy/ward_release_readiness.py",
+      "target": "dota2_insights/ward_release_readiness.py",
+      "source_sha256": "e81551ad8e2c1073bab0b2e86f93e21f7f60cb28f82536cf97696b403a3f0b4d",
+      "export_sha256": "8d357703dc5127e60b1eab03d40edd2f51b1520bac6fde12f0fe16c126573006",
+      "bytes": 5360
+    },
+    {
+      "source": "dota2_economy/ward_review_batch.py",
+      "target": "dota2_insights/ward_review_batch.py",
+      "source_sha256": "57dc58974c7d60690af14ba7cd4d510194e7becbf0e3f7f7bbcf7e4c1c66579d",
+      "export_sha256": "c9fb0360b90e61e1a01bc6d63571bd9cb0e81189eaf79888fb071b2cb97cdeaf",
+      "bytes": 21264
+    },
+    {
+      "source": "dota2_economy/ward_revisits.py",
+      "target": "dota2_insights/ward_revisits.py",
+      "source_sha256": "1d471381695805206929d6ad3a97cae720271f5c4bee4602ab09b09b61b510cd",
+      "export_sha256": "1d471381695805206929d6ad3a97cae720271f5c4bee4602ab09b09b61b510cd",
+      "bytes": 18994
+    },
+    {
+      "source": "dota2_economy/ward_sequence_context.py",
+      "target": "dota2_insights/ward_sequence_context.py",
+      "source_sha256": "73032b725f3f2d3af49cf80b0174abca432b1742e7639d1235f0c8a754d7b5be",
+      "export_sha256": "73032b725f3f2d3af49cf80b0174abca432b1742e7639d1235f0c8a754d7b5be",
+      "bytes": 13868
+    },
+    {
+      "source": "dota2_economy/ward_team_phase_states.py",
+      "target": "dota2_insights/ward_team_phase_states.py",
+      "source_sha256": "5a5c24dad54501ec30527293f9bc7da644934d36413de0253125fdf4830f41cf",
+      "export_sha256": "5a5c24dad54501ec30527293f9bc7da644934d36413de0253125fdf4830f41cf",
+      "bytes": 27186
+    },
+    {
+      "source": "dota2_economy/ward_time_controls.py",
+      "target": "dota2_insights/ward_time_controls.py",
+      "source_sha256": "4c8780166e5fe56a8a64acd80609942d7a0234cc31bc3c571ef655f13e02e25e",
+      "export_sha256": "4c8780166e5fe56a8a64acd80609942d7a0234cc31bc3c571ef655f13e02e25e",
+      "bytes": 18088
+    },
+    {
+      "source": "dota2_economy/ward_validation.py",
+      "target": "dota2_insights/ward_validation.py",
+      "source_sha256": "804ec5c1f422a00cbf055e29c21aed52dded54b4a6cfeae50a5c3a8c4c9e21c4",
+      "export_sha256": "804ec5c1f422a00cbf055e29c21aed52dded54b4a6cfeae50a5c3a8c4c9e21c4",
+      "bytes": 1429
+    },
+    {
+      "source": "dota2_economy/ward_validation_freeze.py",
+      "target": "dota2_insights/ward_validation_freeze.py",
+      "source_sha256": "6fe81507c1cdaef1493e1be72bffddbeb4c1b932cf363a14b5efeb726e930906",
+      "export_sha256": "fb49eb054c9d741e9630c548c2a851d72e6f9760409dd848abccfa33ac197e1b",
+      "bytes": 7010
+    },
+    {
+      "source": "dota2_economy/ward_validation_gap_scan.py",
+      "target": "dota2_insights/ward_validation_gap_scan.py",
+      "source_sha256": "74089c117ef0c9ad496bc23a8ab687855204622463f104403dacfb70f200785e",
+      "export_sha256": "74089c117ef0c9ad496bc23a8ab687855204622463f104403dacfb70f200785e",
+      "bytes": 3402
+    },
+    {
+      "source": "dota2_economy/ward_validation_inventory.py",
+      "target": "dota2_insights/ward_validation_inventory.py",
+      "source_sha256": "aa4c721b620124bbb630416a9fef9ee85ee1f20361a1490df0890c275e0d5a8f",
+      "export_sha256": "aa4c721b620124bbb630416a9fef9ee85ee1f20361a1490df0890c275e0d5a8f",
+      "bytes": 6536
+    },
+    {
+      "source": "dota2_economy/ward_validation_package.py",
+      "target": "dota2_insights/ward_validation_package.py",
+      "source_sha256": "2f7d8f08983f3b6ffa70866c3f1b2645996be5dc2c4f28872bc48164f9a4b371",
+      "export_sha256": "b58d17d69d9b663b97bfcf520aa3b47774ddf55c37da28654e519e25b69b516e",
+      "bytes": 6506
+    },
+    {
+      "source": "dota2_economy/ward_validation_report.py",
+      "target": "dota2_insights/ward_validation_report.py",
+      "source_sha256": "644fc17999db3be08a24c29d5f350b17781aede79fe305fcd67c3bcb0bfd436f",
+      "export_sha256": "e794154a83d992a77ed10f0a9c12c7fc20fb8a532af7f25dec3d87d38a7f5539",
+      "bytes": 5053
+    },
+    {
+      "source": "dota2_economy/ward_validation_sampling.py",
+      "target": "dota2_insights/ward_validation_sampling.py",
+      "source_sha256": "749573b81338eac3c2255b73b307769294c835de927e9bc44dee6b4c7552de65",
+      "export_sha256": "749573b81338eac3c2255b73b307769294c835de927e9bc44dee6b4c7552de65",
+      "bytes": 5992
+    },
+    {
+      "source": "dota2_minimap/dataset.py",
+      "target": "dota2_insights/minimap/dataset.py",
+      "source_sha256": "998159e0929be0ec0faae70aed62a69c1518ea5d7701660b0582fef0c3a5d976",
+      "export_sha256": "998159e0929be0ec0faae70aed62a69c1518ea5d7701660b0582fef0c3a5d976",
+      "bytes": 11151
+    },
+    {
+      "source": "dota2_minimap/offline_io.py",
+      "target": "dota2_insights/minimap/offline_io.py",
+      "source_sha256": "0d20f1de7981eec8203c1a93d9ca6cf1d5e4bb41cb02ea5da29a3dd808ec51bf",
+      "export_sha256": "b4cfa959b815dc9e6fcddcce5575c89af17a3e3fddaa9d24c318a966c6742acb",
+      "bytes": 1468
+    },
+    {
+      "source": "dota2_minimap/replay_alignment.py",
+      "target": "dota2_insights/minimap/replay_alignment.py",
+      "source_sha256": "49ec16ebe4761b3dae6a323e57854b89a941858b5edc2cbd0b8346f5769f751d",
+      "export_sha256": "49ec16ebe4761b3dae6a323e57854b89a941858b5edc2cbd0b8346f5769f751d",
+      "bytes": 25929
+    },
+    {
+      "source": "dota2_minimap/replay_baselines.py",
+      "target": "dota2_insights/minimap/replay_baselines.py",
+      "source_sha256": "be39010f4d115afa8a58bffb04d516f646462fc33b19fe1f155e05a979a5670c",
+      "export_sha256": "be39010f4d115afa8a58bffb04d516f646462fc33b19fe1f155e05a979a5670c",
+      "bytes": 18868
+    },
+    {
+      "source": "dota2_minimap/replay_visibility_windows.py",
+      "target": "dota2_insights/minimap/replay_visibility_windows.py",
+      "source_sha256": "9d256f9d838cc28b78c9910df595112c4fff94dacc14b2445958ceb67ca8f235",
+      "export_sha256": "9d256f9d838cc28b78c9910df595112c4fff94dacc14b2445958ceb67ca8f235",
+      "bytes": 20043
+    },
+    {
+      "source": "dota2_minimap/settings.py",
+      "target": "dota2_insights/minimap/settings.py",
+      "source_sha256": "34c184691e860b96da1762a503d122b115fa9db5c0dc63fef450ede54d8d9fee",
+      "export_sha256": "34c184691e860b96da1762a503d122b115fa9db5c0dc63fef450ede54d8d9fee",
+      "bytes": 7198
+    },
+    {
+      "source": "dota2_minimap/static_map_calibration.py",
+      "target": "dota2_insights/minimap/static_map_calibration.py",
+      "source_sha256": "bd79d6499f6036fea334ad75bfbab8e68d38c012876a6354ce18c5a8b8c6441e",
+      "export_sha256": "bd79d6499f6036fea334ad75bfbab8e68d38c012876a6354ce18c5a8b8c6441e",
+      "bytes": 12042
+    },
+    {
+      "source": "dota2_minimap/visibility_time_audit.py",
+      "target": "dota2_insights/minimap/visibility_time_audit.py",
+      "source_sha256": "4ec982951068912aa3b93ed210145b4fa9217ccdb53277865c568f1fc7aeb27b",
+      "export_sha256": "4ec982951068912aa3b93ed210145b4fa9217ccdb53277865c568f1fc7aeb27b",
+      "bytes": 9843
+    },
+    {
+      "source": "tools/align_minimap_replay.py",
+      "target": "tools/align_minimap_replay.py",
+      "source_sha256": "2794f46169de8ebfd851958ea25eae35a0a45d4695f3a508ace88897bdb7538e",
+      "export_sha256": "d40bfc569917f4aab0d97550e6bfa5709b0ddbaf4b79c3806589cfc02697bd56",
+      "bytes": 3771
+    },
+    {
+      "source": "tools/analyze_match_audio.py",
+      "target": "tools/analyze_match_audio.py",
+      "source_sha256": "2a3862524503696fe7ee474601fd24dfe213c60a97f0e7d73bf8a88e8870bae0",
+      "export_sha256": "8178f7e1dae0f8968848400a57a546725a1725e749337f1f5170e21379a8e954",
+      "bytes": 9605
+    },
+    {
+      "source": "tools/check_map_holdouts.py",
+      "target": "tools/check_map_holdouts.py",
+      "source_sha256": "2f64f05a6ecf5d8fa2d72ef99fcca91e1ce292d9a9a0eb3976d9f2eee35b31d4",
+      "export_sha256": "e5719d8a25fab566a7414bf34d8873fd4ee719d5f0172be11cd32c638a2d215f",
+      "bytes": 1777
+    },
+    {
+      "source": "tools/check_ward_observations.py",
+      "target": "tools/check_ward_observations.py",
+      "source_sha256": "d234a841c09a29dc7b7462f8de702b96a24e7ce7bfbdf5e4fe2cde59fc9d0753",
+      "export_sha256": "f8f3e9d871c51ef4a4e83c5153859789dcea2af10b8770782903dd9994482efb",
+      "bytes": 2007
+    },
+    {
+      "source": "tools/check_ward_release.py",
+      "target": "tools/check_ward_release.py",
+      "source_sha256": "5eeff104e23ae07d0a3d9a9f25c7ce8ee6dc7ed3b1d2ec18fedfffd3d0329839",
+      "export_sha256": "899815bdec4aab5d1c204791fa1ef9a471c4244e8477e07a391b65f121f4496a",
+      "bytes": 1585
+    },
+    {
+      "source": "tools/compare_replay_economy.py",
+      "target": "tools/compare_replay_economy.py",
+      "source_sha256": "7f74e28011728c8206cdb34b50050cd5189a406ecc9ffd06abc20e8b92695a15",
+      "export_sha256": "65f035b119a9d5b07e17c2d7eb4c3d7fda12ec89cecdc84fdf1c358717735fe7",
+      "bytes": 2448
+    },
+    {
+      "source": "tools/evaluate_replay_baselines.py",
+      "target": "tools/evaluate_replay_baselines.py",
+      "source_sha256": "343d61ba2e976d23556ac40328a4a5b47d61899e743554e13ca8d8680d7ebdb2",
+      "export_sha256": "be4d299d8659eac23acd7a34d0bfbab329b2904509fd3621ecaa53ef1ef33126",
+      "bytes": 3826
+    },
+    {
+      "source": "tools/extract_replay_building_landmarks.py",
+      "target": "tools/extract_replay_building_landmarks.py",
+      "source_sha256": "35355f3d5c9f0300fe86cec9eb8ca876d304559d6a0ffd74a14d7c90fadbc8ba",
+      "export_sha256": "eabbcbdcfa41c7d7c16308f92899966b3485d6c282a8d0e4f678f27a3ba89958",
+      "bytes": 5526
+    },
+    {
+      "source": "tools/extract_replay_landmarks.py",
+      "target": "tools/extract_replay_landmarks.py",
+      "source_sha256": "38205668a626295f63466c026d3864d96a85806022943e9a5405bc93830f2f63",
+      "export_sha256": "8e9dab804c23af5c97b156ee59d780cab2348cdb42fa94aad06f0ced312012b3",
+      "bytes": 1826
+    },
+    {
+      "source": "tools/extract_replay_wards.py",
+      "target": "tools/extract_replay_wards.py",
+      "source_sha256": "a614b45b5766d9993c4d9cfcb226bb4b028bc4054f8cf8927c5e4fd74275d289",
+      "export_sha256": "e67086a434af6fba638e711245110da068c18af6fb3c8b190e75d9a1f9eb78df",
+      "bytes": 8251
+    },
+    {
+      "source": "tools/freeze_ward_validation.py",
+      "target": "tools/freeze_ward_validation.py",
+      "source_sha256": "56509fe86edf7cd734149891c55ff9d78845df1069e41fdf5403a09bc32d56aa",
+      "export_sha256": "4fff6a03b59e29415cf07b7dadd34946ad03c56501195043ae6c39cd163ab3a7",
+      "bytes": 3152
+    },
+    {
+      "source": "tools/parse_dota_replay.py",
+      "target": "tools/parse_dota_replay.py",
+      "source_sha256": "facbdcd1c6b208f1503bd54441894f5d065faa9ea7e5cc84f6acdc2460d3f831",
+      "export_sha256": "3245a88086316d790e3f91f56aab75da579fb60911aa09eb2092a618049e3259",
+      "bytes": 2264
+    },
+    {
+      "source": "tools/prepare_replay_item_audit.py",
+      "target": "tools/prepare_replay_item_audit.py",
+      "source_sha256": "de3b33adab68c96fcf598cf9d6c73269747c9d3c4756dbbaf9d2792384eb3acd",
+      "export_sha256": "de3b33adab68c96fcf598cf9d6c73269747c9d3c4756dbbaf9d2792384eb3acd",
+      "bytes": 8818
+    },
+    {
+      "source": "tools/prepare_replay_visibility_windows.py",
+      "target": "tools/prepare_replay_visibility_windows.py",
+      "source_sha256": "a9348c5a62e0cdb70d7b2195e122c27ff53da965e2bdf3b468df469d70d4b809",
+      "export_sha256": "03c461a2c3e2c5d8cf770f14e38ec08f44bee5b4d2556db83c9970b55f3f33e4",
+      "bytes": 2335
+    },
+    {
+      "source": "tools/prepare_ward_samples.py",
+      "target": "tools/prepare_ward_samples.py",
+      "source_sha256": "f2d7b7b36cbd4454922c5cf4c3a1cc7a1b9259aafb8fd927efc6c9d033c3b25c",
+      "export_sha256": "08f936c9e247ad7818cc5706df6cfb24a52f0251714b0bfa8d82aebfc1442ab2",
+      "bytes": 3446
+    },
+    {
+      "source": "tools/prepare_ward_validation.py",
+      "target": "tools/prepare_ward_validation.py",
+      "source_sha256": "79656534a911b80eff491689a96acb5615cdd6d77680fde61107aef29f0bd27f",
+      "export_sha256": "d4764224ffe1a8930595b0e884f539cba8ab3d3ac222aa0b73c50d7ef216a8f1",
+      "bytes": 1573
+    },
+    {
+      "source": "tools/prepare_ward_validation_match.py",
+      "target": "tools/prepare_ward_validation_match.py",
+      "source_sha256": "9db5a38d44aaa0d535ab2aad0e5a910e5641e6ee56c2ba771e15022d88d7ea64",
+      "export_sha256": "019f56caecb7130d5e102949a3b240cdb3a1034ddce04dd4864b6ccb2638ee14",
+      "bytes": 3780
+    },
+    {
+      "source": "tools/render_ward_validation_pending.py",
+      "target": "tools/render_ward_validation_pending.py",
+      "source_sha256": "bed788f63e2a60e410bc823a9468f77c1138660b46290014f02c33f2e8f1fa6b",
+      "export_sha256": "6d99ef77a2a12a147ff58962e548f89fe32bfbedfd3677396e8b5c75aacc3f74",
+      "bytes": 972
+    },
+    {
+      "source": "tools/resolve_ward_validation_gaps.py",
+      "target": "tools/resolve_ward_validation_gaps.py",
+      "source_sha256": "251e477c0a40b0a95052cabdd1ba4405810a801e3d441a83eecfb6dce21f22c2",
+      "export_sha256": "43827c957e28ccaaee5a3d9a9ffeb24352313f9667ea850a5e96217596a44872",
+      "bytes": 2054
+    },
+    {
+      "source": "tools/review_long_lived_wards.py",
+      "target": "tools/review_long_lived_wards.py",
+      "source_sha256": "2535e0bab4f791d6148a7bb4db5dc3be13edfa1d18295a49844dfea9e18d0a29",
+      "export_sha256": "2535e0bab4f791d6148a7bb4db5dc3be13edfa1d18295a49844dfea9e18d0a29",
+      "bytes": 11112
+    },
+    {
+      "source": "tools/review_own_wards.py",
+      "target": "tools/review_own_wards.py",
+      "source_sha256": "003d40b05c8f2cfde2f25c3b28f8212a8101605d591fcb0187bee272e7ce9713",
+      "export_sha256": "003d40b05c8f2cfde2f25c3b28f8212a8101605d591fcb0187bee272e7ce9713",
+      "bytes": 14832
+    },
+    {
+      "source": "tools/review_recent_replay_wards.py",
+      "target": "tools/review_recent_replay_wards.py",
+      "source_sha256": "d9fc242573d59581249926c287062b2933778c1bcce5264964c559b9fd02941c",
+      "export_sha256": "7efdb0be95be9f29e8ebc530b97e6cfcab42eb4aceeff44e1905a51fba1be80e",
+      "bytes": 12535
+    },
+    {
+      "source": "tools/review_replay_audio.py",
+      "target": "tools/review_replay_audio.py",
+      "source_sha256": "8319009791664e31e4cb7e2a6039bbf977e13cf4e700859849d41c4bf3b7f7ad",
+      "export_sha256": "8319009791664e31e4cb7e2a6039bbf977e13cf4e700859849d41c4bf3b7f7ad",
+      "bytes": 13036
+    },
+    {
+      "source": "tools/review_replay_facts.py",
+      "target": "tools/review_replay_facts.py",
+      "source_sha256": "e6e750ccd28919a68b9a08d54e2a7c5bb2392948f92262824f32c31e0702a5c8",
+      "export_sha256": "6525d850e955220b2ec66e1417559a3560f93e8ad6ed117f5627da858b47b6fb",
+      "bytes": 1078
+    },
+    {
+      "source": "tools/review_replay_last_visible_inventory.py",
+      "target": "tools/review_replay_last_visible_inventory.py",
+      "source_sha256": "d8c1360b639996de4c820b17bf79d27150c3806a86b71b471779e46e55a7240a",
+      "export_sha256": "d8c1360b639996de4c820b17bf79d27150c3806a86b71b471779e46e55a7240a",
+      "bytes": 9337
+    },
+    {
+      "source": "tools/review_ward_building_regions.py",
+      "target": "tools/review_ward_building_regions.py",
+      "source_sha256": "162cce9f793aa15614e25a4233bc57a693ccec3c1bb0355f38a331ec82c4efb9",
+      "export_sha256": "78c263335a398d7215997934cee54a21efa2cf65277de3ab04a4afd769b922dd",
+      "bytes": 767
+    },
+    {
+      "source": "tools/review_ward_clock_alignment.py",
+      "target": "tools/review_ward_clock_alignment.py",
+      "source_sha256": "1d2cbb104ea073829e5c3ef43ae4a2565f9e7ecb3dd0402b104adc91032ab086",
+      "export_sha256": "f50f08dfcfd94df3082ebae4ad8ecc8f176bb1825170f76b44a81b41a10faac3",
+      "bytes": 2066
+    },
+    {
+      "source": "tools/review_ward_cohort_trajectories.py",
+      "target": "tools/review_ward_cohort_trajectories.py",
+      "source_sha256": "9c07244906d7a2b63384eb498ebb2ed57b62924a06df1c7d23c806ac192dff40",
+      "export_sha256": "b8496b63214e7f057e38f53ed34d900c8e9870657db24c1c658da43b9b592e9d",
+      "bytes": 1408
+    },
+    {
+      "source": "tools/review_ward_context_balance.py",
+      "target": "tools/review_ward_context_balance.py",
+      "source_sha256": "b8d93553fb6293f636e4a7e7bbc9d084d35f505b972a7d4497d1413998df059d",
+      "export_sha256": "6a78320d04ddc2aade1c1c8b3f8072fac14e786f7eecd62d5be90c2790fc8c11",
+      "bytes": 2130
+    },
+    {
+      "source": "tools/review_ward_control_regions.py",
+      "target": "tools/review_ward_control_regions.py",
+      "source_sha256": "2bd79d1ea1d9b49efc954df1a212224a84f05a2e188794737d5708b2978ee349",
+      "export_sha256": "f34521b1dca1c8a010cc32f390d5beeeed4c8aac5549a865a47b932d620fb1b1",
+      "bytes": 2251
+    },
+    {
+      "source": "tools/review_ward_event_windows.py",
+      "target": "tools/review_ward_event_windows.py",
+      "source_sha256": "da0f7782ca6bc4c953c585966c05b7d2e45ca747d2b60790d0356d2168d09cd2",
+      "export_sha256": "95b894e6610046f97ceed86290db3a2640f9b21a395b58379508b944237c47cf",
+      "bytes": 2729
+    },
+    {
+      "source": "tools/review_ward_interval_phases.py",
+      "target": "tools/review_ward_interval_phases.py",
+      "source_sha256": "2350e05c3b472a3d9f96777463775b995d173ada5313b3141868d00fc0f17686",
+      "export_sha256": "296a7442df504edcca37244b82e7c5bf39545fed660210874633a1338e803b65",
+      "bytes": 2141
+    },
+    {
+      "source": "tools/review_ward_intervals.py",
+      "target": "tools/review_ward_intervals.py",
+      "source_sha256": "c4f9dfdd9866718e41a63f18df47e7781d695c1a5dce108629243a1b5225b841",
+      "export_sha256": "362e0ee7aa07b3566fc9ac3d9d1fde62cdf24868e83c54f489a38e44e037531f",
+      "bytes": 2042
+    },
+    {
+      "source": "tools/review_ward_objective_opportunities.py",
+      "target": "tools/review_ward_objective_opportunities.py",
+      "source_sha256": "e65d8aad2f27a7076fd5e401c3410e066abdfd9c69f6005875a3d29166c78cba",
+      "export_sha256": "3355cf6357fdb984f315f1046c6f0b0631838ef34b0d488465c2bc7cfd3f562d",
+      "bytes": 2008
+    },
+    {
+      "source": "tools/review_ward_region_stability.py",
+      "target": "tools/review_ward_region_stability.py",
+      "source_sha256": "51ce3de316e45612de039ddf55a535fae489b3f1b79caeb00138a396f9bf63b9",
+      "export_sha256": "7fcb9f1f45fd2bd439de7a0a8fcc2cda2192d586583d76eed144e7bc192a7d7b",
+      "bytes": 2374
+    },
+    {
+      "source": "tools/review_ward_revisits.py",
+      "target": "tools/review_ward_revisits.py",
+      "source_sha256": "39825bf6d67759f407cd3e25e5c0047d8cdace3ded8dae28a781fd09a5a717c3",
+      "export_sha256": "73487057510a443b205580e4003e345d28b794db3969ee519a705fe4e65d5d07",
+      "bytes": 1668
+    },
+    {
+      "source": "tools/review_ward_team_phases.py",
+      "target": "tools/review_ward_team_phases.py",
+      "source_sha256": "c94046d39597875000fbf3c645ecbe2d57ba8bdf30fd2f6b9c14389192592c90",
+      "export_sha256": "c648f5be1e4a5b32ed5092c96b9033ddc2c939b9d21fe8e03251b5e0c601fd37",
+      "bytes": 3103
+    },
+    {
+      "source": "tools/review_ward_time_controls.py",
+      "target": "tools/review_ward_time_controls.py",
+      "source_sha256": "d372f6aa94f5e986f59826e7a4678a317c79013ac6130d42aa004da7e162c890",
+      "export_sha256": "b31f7c0484199d3deba4c3675a911824fb8d5fed039ddbdc84cd9bfffa7de687",
+      "bytes": 2182
+    },
+    {
+      "source": "tools/run_replay_job.py",
+      "target": "tools/run_replay_job.py",
+      "source_sha256": "c13d3ca673e69bdb76b0e680d9d7b444a5764bbd05898fa13df2c86233e9193c",
+      "export_sha256": "fd94cbb8fe7a9ca0c593d00269b9ec07056c79d847b6d8e70514996198a544dc",
+      "bytes": 6168
+    },
+    {
+      "source": "tools/ward_review.py",
+      "target": "tools/ward_review.py",
+      "source_sha256": "be06cd8a43e3d32bd26eadef8db17de92b4d651387fa754a0976abdca23b9eeb",
+      "export_sha256": "4e939b7c91bfcae20257bb6d3308cc02009fab500a73bd0d7d2855dc88b0e10e",
+      "bytes": 3206
+    },
+    {
+      "source": "tools/win_replay_analysis.py",
+      "target": "tools/win_replay_analysis.py",
+      "source_sha256": "478845932ef5d43be6b8f0c7c351641cbccc7ea5864b84c7c9aec20019d7029a",
+      "export_sha256": "25676dc19a6f24b7c0412ff02c33b4361da21b6f463308939b17c8e1a39370c9",
+      "bytes": 5323
+    },
+    {
+      "source": "tests/test_map_holdout.py",
+      "target": "tests/test_map_holdout.py",
+      "source_sha256": "4cec564b138b1c770993f281f5195294ff1d7bd6af696e83dbd54274640615ff",
+      "export_sha256": "7972827ff96e30b7c39520830566301af3d8dc3fff9e29b90789e128f6fda905",
+      "bytes": 9020
+    },
+    {
+      "source": "tests/test_replay_audio_scan_diagnostics.py",
+      "target": "tests/test_replay_audio_scan_diagnostics.py",
+      "source_sha256": "c6d174eb441900bcce36793731394d329d80b0339f8fbd53c82a7138fe0199a0",
+      "export_sha256": "c6d174eb441900bcce36793731394d329d80b0339f8fbd53c82a7138fe0199a0",
+      "bytes": 4932
+    },
+    {
+      "source": "tests/test_replay_death_semantics.py",
+      "target": "tests/test_replay_death_semantics.py",
+      "source_sha256": "2feb8a5981a1d29ff70ec375a1029356372182bac488b9ee46f4d73e3bb81fb9",
+      "export_sha256": "1fe3b12beb2b42967182391d8fc83bc29fe38492b14d0ff522cb9fd95196d98a",
+      "bytes": 14455
+    },
+    {
+      "source": "tests/test_replay_fact_review.py",
+      "target": "tests/test_replay_fact_review.py",
+      "source_sha256": "a4b54cec4c77ed10589ad1050044117de9d47097fc0bd8608f4813ea367fd855",
+      "export_sha256": "0942f18f69b1870d2eac728026bd03764bbfefaa95eb0be235211525b6cd908a",
+      "bytes": 16242
+    },
+    {
+      "source": "tests/test_replay_periods.py",
+      "target": "tests/test_replay_periods.py",
+      "source_sha256": "571628049eb3a1261f9aa1469687d76f4c192b568b293dfd96c90ad8e99bee7a",
+      "export_sha256": "560d5765a529be8549c4e101b0ebfb797b824bcd527785348e5b2bce08e5882a",
+      "bytes": 20917
+    },
+    {
+      "source": "tests/test_replay_phase_evidence.py",
+      "target": "tests/test_replay_phase_evidence.py",
+      "source_sha256": "221efa7a83e55a1418232a4966baab7691de4206b50936d2751c07e030eeefeb",
+      "export_sha256": "f5be47dbd284c820c397788f892edef656d56caf4a61358319cbeda8117309d8",
+      "bytes": 9509
+    },
+    {
+      "source": "tests/test_replay_runtime.py",
+      "target": "tests/test_replay_runtime.py",
+      "source_sha256": "6803e0d570d2e6613a287907f81e587a8603bb73c77295ba93dec9c06422533f",
+      "export_sha256": "9c44f5a7a4735c089dd0775d9783ff9ff6c79e066c5677629955e929507fbf10",
+      "bytes": 5903
+    },
+    {
+      "source": "tests/test_replay_workbench.py",
+      "target": "tests/test_replay_workbench.py",
+      "source_sha256": "e37af0b70ae3108fd9b51a17ae0bb7de1f7a45ec36d26f5b7edd52e2f9007a57",
+      "export_sha256": "a14b65d7bcd80d81f2eb92d1012099e3247385365dbae185c16c23fe6a3dcfdf",
+      "bytes": 15484
+    },
+    {
+      "source": "tests/test_ward_release_readiness.py",
+      "target": "tests/test_ward_release_readiness.py",
+      "source_sha256": "e8b102a17d50b6c0c3f93d6e045100fd9487c12d83168fd221882267b1d2247e",
+      "export_sha256": "1ff1a512c3c589b889cb7002f4e4be0e20a9a53cf726370753eeca64638da007",
+      "bytes": 4983
+    },
+    {
+      "source": "tests/test_ward_validation_freeze.py",
+      "target": "tests/test_ward_validation_freeze.py",
+      "source_sha256": "6e630809fb9817cb79e7ea7a5edb0f87069457e84ce9a2d994433e5642a50b13",
+      "export_sha256": "d4bbae9ba2ba87d4f0086142538f7e26fe6ccbf82e7770ff7e482f8b3423bec0",
+      "bytes": 4993
+    },
+    {
+      "source": "tests/test_ward_validation_gap_scan.py",
+      "target": "tests/test_ward_validation_gap_scan.py",
+      "source_sha256": "5191049df487adf86e62a66b787f193f99d4320da8d2f7aace6be620e9e03422",
+      "export_sha256": "6275fdd257384271b0a61dddf7c426213e41f2957b0b662a11ba722285702917",
+      "bytes": 2379
+    },
+    {
+      "source": "tests/test_ward_validation_inventory.py",
+      "target": "tests/test_ward_validation_inventory.py",
+      "source_sha256": "837592bf2049997f60ff8d260596c61e16082fcdf9fe58e0a01624eb8bc0d613",
+      "export_sha256": "acfcc88cbe7459a98e3f3b3422891ffb55b306a393e1e21afeb2c414e1885ae7",
+      "bytes": 3331
+    },
+    {
+      "source": "tests/test_ward_validation_observations.py",
+      "target": "tests/test_ward_validation_observations.py",
+      "source_sha256": "2733a37ca434dcd36ec93dfdd90af9cb7e644e2324415693844c958ac0f6111e",
+      "export_sha256": "d10fd5d226d916bdc49d9a929324a84738657179e0b036ae25006242754170fe",
+      "bytes": 6028
+    },
+    {
+      "source": "tests/test_ward_validation_package.py",
+      "target": "tests/test_ward_validation_package.py",
+      "source_sha256": "cd6e4abca698e45fece0b2fd96dd87ee63d7c00365d783491458fd84f85ee433",
+      "export_sha256": "5aebbfb5ca87ba0dbfe1507c33c4026e8e5d95ef451c1f14e93a0f51ad99af61",
+      "bytes": 6203
+    },
+    {
+      "source": "tests/test_ward_validation_sampling.py",
+      "target": "tests/test_ward_validation_sampling.py",
+      "source_sha256": "acd74d1eac0fd43ac4d24fcfb8b773d7ec5afacf3037e134e05c58e79ea5d018",
+      "export_sha256": "789944e7fd043c91391e49371c4117f3ed234706205cd58ebacd219b34f6545d",
+      "bytes": 3096
+    },
+    {
+      "source": "tests/fixtures/invalid_tooltip_aliases.json",
+      "target": "tests/fixtures/invalid_tooltip_aliases.json",
+      "source_sha256": "e03826fd05c55a454cc0dc3dbd529e9a0f090d9fc5920bf27ac537ece2d326b4",
+      "export_sha256": "e03826fd05c55a454cc0dc3dbd529e9a0f090d9fc5920bf27ac537ece2d326b4",
+      "bytes": 41
+    },
+    {
+      "source": "tests/fixtures/items.json",
+      "target": "tests/fixtures/items.json",
+      "source_sha256": "885f6fbd1f7bd2c0d71855ff7909afe5f8a7171aa9625592d536c715abef5b2f",
+      "export_sha256": "885f6fbd1f7bd2c0d71855ff7909afe5f8a7171aa9625592d536c715abef5b2f",
+      "bytes": 174
+    },
+    {
+      "source": "tests/fixtures/items.meta.json",
+      "target": "tests/fixtures/items.meta.json",
+      "source_sha256": "321919128216dc771e3f107e9af81a5b50fab5aa11eea95d39db73e54b878df5",
+      "export_sha256": "321919128216dc771e3f107e9af81a5b50fab5aa11eea95d39db73e54b878df5",
+      "bytes": 110
+    },
+    {
+      "source": "tests/fixtures/snapshot_v1_full.json",
+      "target": "tests/fixtures/snapshot_v1_full.json",
+      "source_sha256": "595702a95b4a92b967f3615c99f34886e52160b84461fb4f3dc82478d8fb4370",
+      "export_sha256": "595702a95b4a92b967f3615c99f34886e52160b84461fb4f3dc82478d8fb4370",
+      "bytes": 5707
+    },
+    {
+      "source": "tests/fixtures/snapshot_v1_partial.json",
+      "target": "tests/fixtures/snapshot_v1_partial.json",
+      "source_sha256": "285971e1824c6362d364132e263387e2fe9e716272ace835da1ec1e66ed9c9ea",
+      "export_sha256": "285971e1824c6362d364132e263387e2fe9e716272ace835da1ec1e66ed9c9ea",
+      "bytes": 5221
+    },
+    {
+      "source": "tests/fixtures/snapshot_v1_session_change.json",
+      "target": "tests/fixtures/snapshot_v1_session_change.json",
+      "source_sha256": "96a80eb8c9db1861bff67a491905a70246f94b83d3d13fd1fef1f7f99061456b",
+      "export_sha256": "96a80eb8c9db1861bff67a491905a70246f94b83d3d13fd1fef1f7f99061456b",
+      "bytes": 26374
+    },
+    {
+      "source": "data/items.json",
+      "target": "data/items.json",
+      "source_sha256": "3f4eb0183ace5479ace6b11f02c9fb43fe04ab8c83e381f9c421202aa30d93c4",
+      "export_sha256": "3f4eb0183ace5479ace6b11f02c9fb43fe04ab8c83e381f9c421202aa30d93c4",
+      "bytes": 25853
+    },
+    {
+      "source": "data/items.meta.json",
+      "target": "data/items.meta.json",
+      "source_sha256": "e540aa861255b314cc9a3903bc75a9676bd64732cf3a19fb6fadcc9bff799d81",
+      "export_sha256": "e540aa861255b314cc9a3903bc75a9676bd64732cf3a19fb6fadcc9bff799d81",
+      "bytes": 10058
+    },
+    {
+      "source": "data/item_names.zh_cn.json",
+      "target": "data/item_names.zh_cn.json",
+      "source_sha256": "8ec6f59a4f41c5f5b88c2f8f8815b2b74b4f7488e0818237d00246a524a814da",
+      "export_sha256": "8ec6f59a4f41c5f5b88c2f8f8815b2b74b4f7488e0818237d00246a524a814da",
+      "bytes": 12379
+    },
+    {
+      "source": "data/ability_sound_events.json",
+      "target": "data/ability_sound_events.json",
+      "source_sha256": "dde544135c2e27b5914612f03584e63bce378276b700934a9999c0c69b6474de",
+      "export_sha256": "dde544135c2e27b5914612f03584e63bce378276b700934a9999c0c69b6474de",
+      "bytes": 3466
+    },
+    {
+      "source": "data/ability_sound_events.all_skills.json",
+      "target": "data/ability_sound_events.all_skills.json",
+      "source_sha256": "ea15cadfc1d2181678297f80444d61d87798c9ba32ae45389b7e8412a43d9f01",
+      "export_sha256": "ea15cadfc1d2181678297f80444d61d87798c9ba32ae45389b7e8412a43d9f01",
+      "bytes": 32497
+    },
+    {
+      "source": "data/ability_sound_names.zh_cn.json",
+      "target": "data/ability_sound_names.zh_cn.json",
+      "source_sha256": "5481ecf1bdf6b6a431c3295b8a33542dd034072448140383b706dbd21bbc32d2",
+      "export_sha256": "5481ecf1bdf6b6a431c3295b8a33542dd034072448140383b706dbd21bbc32d2",
+      "bytes": 4641
+    },
+    {
+      "source": "requirements-replay.txt",
+      "target": "requirements-replay.txt",
+      "source_sha256": "415732f9e6b1bb07895f1e6a2d7ea8bf3d9f18f739d29434caba4f15cf6a41ef",
+      "export_sha256": "415732f9e6b1bb07895f1e6a2d7ea8bf3d9f18f739d29434caba4f15cf6a41ef",
+      "bytes": 575
+    },
+    {
+      "source": "docs/AUDIO_GATE_DIAGNOSTICS_20261025.md",
+      "target": "docs/legacy/AUDIO_GATE_DIAGNOSTICS_20261025.md",
+      "source_sha256": "f407f9f3664b03076c396abb622c6c5058ab22ff32faa297061a01829d2608e8",
+      "export_sha256": "f407f9f3664b03076c396abb622c6c5058ab22ff32faa297061a01829d2608e8",
+      "bytes": 3909
+    },
+    {
+      "source": "docs/AUDIO_REPLAY_SCAN_DIAGNOSTICS_V1.md",
+      "target": "docs/legacy/AUDIO_REPLAY_SCAN_DIAGNOSTICS_V1.md",
+      "source_sha256": "786d253e726e1fbc4ee820c08653f7140c92dc4507f770fed0a0e80aaf917c86",
+      "export_sha256": "786d253e726e1fbc4ee820c08653f7140c92dc4507f770fed0a0e80aaf917c86",
+      "bytes": 3249
+    },
+    {
+      "source": "docs/BP_CONTROLLED_UNIT_REVIEW_20261025.md",
+      "target": "docs/legacy/BP_CONTROLLED_UNIT_REVIEW_20261025.md",
+      "source_sha256": "83f2923fdf6c103b3d59055329ebaaa9dab2ff72831dbcefd9c43e6cd5b22082",
+      "export_sha256": "83f2923fdf6c103b3d59055329ebaaa9dab2ff72831dbcefd9c43e6cd5b22082",
+      "bytes": 4938
+    },
+    {
+      "source": "docs/BP_SOURCE_REVIEW_20261025.md",
+      "target": "docs/legacy/BP_SOURCE_REVIEW_20261025.md",
+      "source_sha256": "825e2b92021eb2c4bb3f8d170a9ff647ffc1a7e4fc9882ec8aadeecdf10ac58e",
+      "export_sha256": "825e2b92021eb2c4bb3f8d170a9ff647ffc1a7e4fc9882ec8aadeecdf10ac58e",
+      "bytes": 5084
+    },
+    {
+      "source": "docs/MAP_HOLDOUT_AND_WARD_ROUTE_20261025.md",
+      "target": "docs/legacy/MAP_HOLDOUT_AND_WARD_ROUTE_20261025.md",
+      "source_sha256": "a5224386c9fd82483f2a039f48e40026b5cb3a905aa79e78ea6efa0943d001fb",
+      "export_sha256": "a5224386c9fd82483f2a039f48e40026b5cb3a905aa79e78ea6efa0943d001fb",
+      "bytes": 9682
+    },
+    {
+      "source": "docs/MINIMAP_REPLAY_BASELINES_20261015.md",
+      "target": "docs/legacy/MINIMAP_REPLAY_BASELINES_20261015.md",
+      "source_sha256": "af824b14e3638315fb6471f2550cd1e911fa9454bc90129b2944031fd18b483a",
+      "export_sha256": "af824b14e3638315fb6471f2550cd1e911fa9454bc90129b2944031fd18b483a",
+      "bytes": 7810
+    },
+    {
+      "source": "docs/MINIMAP_REPLAY_VISIBILITY_CHECK_20261015.md",
+      "target": "docs/legacy/MINIMAP_REPLAY_VISIBILITY_CHECK_20261015.md",
+      "source_sha256": "2a4c84e22484c569004e74cd795f176e6da5370dc15a0e493752ab6333624fa1",
+      "export_sha256": "2a4c84e22484c569004e74cd795f176e6da5370dc15a0e493752ab6333624fa1",
+      "bytes": 5685
+    },
+    {
+      "source": "docs/PC_REPLAY_WORKBENCH.md",
+      "target": "docs/legacy/PC_REPLAY_WORKBENCH.md",
+      "source_sha256": "6994ee48241f2b6defbd567444831a0376d77eb9b1a0bb1da3d479ef1badde32",
+      "export_sha256": "6994ee48241f2b6defbd567444831a0376d77eb9b1a0bb1da3d479ef1badde32",
+      "bytes": 11903
+    },
+    {
+      "source": "docs/PI_REPLAY_LIBRARY.md",
+      "target": "docs/legacy/PI_REPLAY_LIBRARY.md",
+      "source_sha256": "91d3eee5d1c0cf79447ad991dea5df1780d2304056daecceb5d275e6c0c1a9d7",
+      "export_sha256": "91d3eee5d1c0cf79447ad991dea5df1780d2304056daecceb5d275e6c0c1a9d7",
+      "bytes": 7769
+    },
+    {
+      "source": "docs/RECENT_REPLAY_AUDIO_REVIEW.md",
+      "target": "docs/legacy/RECENT_REPLAY_AUDIO_REVIEW.md",
+      "source_sha256": "f6414c61b1853a922adca5e39a1393c7a3fad103ca53bb046f97d11ab80e4dcc",
+      "export_sha256": "f6414c61b1853a922adca5e39a1393c7a3fad103ca53bb046f97d11ab80e4dcc",
+      "bytes": 7778
+    },
+    {
+      "source": "docs/RECENT_THREE_REPLAY_REVIEW_20261019.md",
+      "target": "docs/legacy/RECENT_THREE_REPLAY_REVIEW_20261019.md",
+      "source_sha256": "0bf47250d627d19cad89eff65f544d07cc5b47f71d808f9c581ab38ba6cf24c4",
+      "export_sha256": "0bf47250d627d19cad89eff65f544d07cc5b47f71d808f9c581ab38ba6cf24c4",
+      "bytes": 7887
+    },
+    {
+      "source": "docs/REPLAY_DEEP_REVIEW_20261016.md",
+      "target": "docs/legacy/REPLAY_DEEP_REVIEW_20261016.md",
+      "source_sha256": "e2c75dce9f952b3a79d7d6d9d05a1132c1c4c4ebc3a66ce48818b4b892bb5697",
+      "export_sha256": "e2c75dce9f952b3a79d7d6d9d05a1132c1c4c4ebc3a66ce48818b4b892bb5697",
+      "bytes": 7027
+    },
+    {
+      "source": "docs/REPLAY_DOWNLOAD_FEASIBILITY_20261015.md",
+      "target": "docs/legacy/REPLAY_DOWNLOAD_FEASIBILITY_20261015.md",
+      "source_sha256": "cd2154aeeb7e89379060eb14dafd483d0414716fad1d6a5bcc95ce5e1514187b",
+      "export_sha256": "cd2154aeeb7e89379060eb14dafd483d0414716fad1d6a5bcc95ce5e1514187b",
+      "bytes": 6402
+    },
+    {
+      "source": "docs/REPLAY_ECONOMY_31_SLOT_REVIEW_20261015.md",
+      "target": "docs/legacy/REPLAY_ECONOMY_31_SLOT_REVIEW_20261015.md",
+      "source_sha256": "df3b454e4e3e1b2b6ec877295730436857440875e386b22e37a9e08d6a11ced5",
+      "export_sha256": "df3b454e4e3e1b2b6ec877295730436857440875e386b22e37a9e08d6a11ced5",
+      "bytes": 18838
+    },
+    {
+      "source": "docs/REPLAY_FIELD_COVERAGE_20261025.md",
+      "target": "docs/legacy/REPLAY_FIELD_COVERAGE_20261025.md",
+      "source_sha256": "24bdf8d3284e30af3877f88453fb52ee0455c4d40e52b8b130dee79dcbb268d4",
+      "export_sha256": "24bdf8d3284e30af3877f88453fb52ee0455c4d40e52b8b130dee79dcbb268d4",
+      "bytes": 4524
+    },
+    {
+      "source": "docs/REPLAY_METADATA_BATCH_20261021.md",
+      "target": "docs/legacy/REPLAY_METADATA_BATCH_20261021.md",
+      "source_sha256": "a135d8e7eb502281b5e455623a95a2059112cf59cb959909dc093da37647383f",
+      "export_sha256": "a135d8e7eb502281b5e455623a95a2059112cf59cb959909dc093da37647383f",
+      "bytes": 4675
+    },
+    {
+      "source": "docs/REPLAY_METADATA_EXPANSION_20261022.md",
+      "target": "docs/legacy/REPLAY_METADATA_EXPANSION_20261022.md",
+      "source_sha256": "220545c24b1116c26d2696067b911d83c065926d5510274394c4d7a6e084f958",
+      "export_sha256": "220545c24b1116c26d2696067b911d83c065926d5510274394c4d7a6e084f958",
+      "bytes": 4848
+    },
+    {
+      "source": "docs/REPLAY_METADATA_PROBE_20261021.md",
+      "target": "docs/legacy/REPLAY_METADATA_PROBE_20261021.md",
+      "source_sha256": "935890a2e4ad9bf50e108c94b18353cc82a856e374e3239647b098b585669a05",
+      "export_sha256": "935890a2e4ad9bf50e108c94b18353cc82a856e374e3239647b098b585669a05",
+      "bytes": 4283
+    },
+    {
+      "source": "docs/REPLAY_OFFLINE_REVIEW_20261015.md",
+      "target": "docs/legacy/REPLAY_OFFLINE_REVIEW_20261015.md",
+      "source_sha256": "23867ad240ce02550204bf4604103f3b1b42d08da8bb1f84ed4fde0a0b9eb9a5",
+      "export_sha256": "23867ad240ce02550204bf4604103f3b1b42d08da8bb1f84ed4fde0a0b9eb9a5",
+      "bytes": 17781
+    },
+    {
+      "source": "docs/REPLAY_REFERENCE_PROJECTS_20261020.md",
+      "target": "docs/legacy/REPLAY_REFERENCE_PROJECTS_20261020.md",
+      "source_sha256": "d3f61e40289bc3a8b38e11903f2761af5f66ee3237967a6dd38dfb8b66a7d239",
+      "export_sha256": "d3f61e40289bc3a8b38e11903f2761af5f66ee3237967a6dd38dfb8b66a7d239",
+      "bytes": 6319
+    },
+    {
+      "source": "docs/REPLAY_REFERENCE_REVIEW_20261015.md",
+      "target": "docs/legacy/REPLAY_REFERENCE_REVIEW_20261015.md",
+      "source_sha256": "9ad2e0d7b2682cf373e10e05e0b8240dcb4aa334b5272bc0ae538479b5d309b7",
+      "export_sha256": "9ad2e0d7b2682cf373e10e05e0b8240dcb4aa334b5272bc0ae538479b5d309b7",
+      "bytes": 10599
+    },
+    {
+      "source": "docs/REPLAY_REFINEMENT_20261016.md",
+      "target": "docs/legacy/REPLAY_REFINEMENT_20261016.md",
+      "source_sha256": "861aaa7dde6e866748cd6a24136c2499ce23a084f7ad72dd126d2afc8eec6c2f",
+      "export_sha256": "861aaa7dde6e866748cd6a24136c2499ce23a084f7ad72dd126d2afc8eec6c2f",
+      "bytes": 5000
+    },
+    {
+      "source": "docs/REPLAY_SCREENSHOT_REVIEW_20261016.md",
+      "target": "docs/legacy/REPLAY_SCREENSHOT_REVIEW_20261016.md",
+      "source_sha256": "76f6da66c018cc8584f75ff5ddc1e65472ec80064191e43577e543d589c9be55",
+      "export_sha256": "76f6da66c018cc8584f75ff5ddc1e65472ec80064191e43577e543d589c9be55",
+      "bytes": 8294
+    },
+    {
+      "source": "docs/STEAM_REPLAY_LOGIN.md",
+      "target": "docs/legacy/STEAM_REPLAY_LOGIN.md",
+      "source_sha256": "72f9300c063d2f1d3f0d2f96f2d2a8f1c41d97b4d4ed8530f14b051f242788fc",
+      "export_sha256": "72f9300c063d2f1d3f0d2f96f2d2a8f1c41d97b4d4ed8530f14b051f242788fc",
+      "bytes": 4280
+    },
+    {
+      "source": "docs/WARD_CLIENT_REVIEW_20261023.md",
+      "target": "docs/legacy/WARD_CLIENT_REVIEW_20261023.md",
+      "source_sha256": "3d30169dcb24f727b01bf0ee06c2e608c8006bd355daf21c36c5de7c5b166cf0",
+      "export_sha256": "3d30169dcb24f727b01bf0ee06c2e608c8006bd355daf21c36c5de7c5b166cf0",
+      "bytes": 4360
+    },
+    {
+      "source": "docs/WARD_CLOCK_ALIGNMENT_20261021.md",
+      "target": "docs/legacy/WARD_CLOCK_ALIGNMENT_20261021.md",
+      "source_sha256": "5e2ce651c9417f16b4f924925c78095da0f67d16f0be3f86ef7df464d869406b",
+      "export_sha256": "5e2ce651c9417f16b4f924925c78095da0f67d16f0be3f86ef7df464d869406b",
+      "bytes": 4267
+    },
+    {
+      "source": "docs/WARD_COHORT_TRAJECTORIES_20261022.md",
+      "target": "docs/legacy/WARD_COHORT_TRAJECTORIES_20261022.md",
+      "source_sha256": "7ec8e99fdfa5a041ef7f1b10910b8d183d9aafe1628aed4f2ee39ed1826c4b64",
+      "export_sha256": "7ec8e99fdfa5a041ef7f1b10910b8d183d9aafe1628aed4f2ee39ed1826c4b64",
+      "bytes": 7936
+    },
+    {
+      "source": "docs/WARD_CONTEXT_BALANCE_20261021.md",
+      "target": "docs/legacy/WARD_CONTEXT_BALANCE_20261021.md",
+      "source_sha256": "1a2094a81935f0a1a28175c0abfe6a23fdf038b7d68524c0e51b3363e323f45c",
+      "export_sha256": "1a2094a81935f0a1a28175c0abfe6a23fdf038b7d68524c0e51b3363e323f45c",
+      "bytes": 7894
+    },
+    {
+      "source": "docs/WARD_CONTROL_REGIONS_20261021.md",
+      "target": "docs/legacy/WARD_CONTROL_REGIONS_20261021.md",
+      "source_sha256": "cd4aa1df343d3af0cc559756358cee9dc68a7208b03fdaef0c9b9c2bf3a216f5",
+      "export_sha256": "cd4aa1df343d3af0cc559756358cee9dc68a7208b03fdaef0c9b9c2bf3a216f5",
+      "bytes": 7802
+    },
+    {
+      "source": "docs/WARD_EVENT_WINDOWS_20261021.md",
+      "target": "docs/legacy/WARD_EVENT_WINDOWS_20261021.md",
+      "source_sha256": "6f39b7059e747997246a5ca6840dca474082aac312f790913597ff732d97fcfb",
+      "export_sha256": "6f39b7059e747997246a5ca6840dca474082aac312f790913597ff732d97fcfb",
+      "bytes": 5357
+    },
+    {
+      "source": "docs/WARD_INDEPENDENT_VALIDATION.md",
+      "target": "docs/legacy/WARD_INDEPENDENT_VALIDATION.md",
+      "source_sha256": "e16f55ffbb5838fb2f22385da04c7ba0cb5f1655a22422123d655a13214728e5",
+      "export_sha256": "e16f55ffbb5838fb2f22385da04c7ba0cb5f1655a22422123d655a13214728e5",
+      "bytes": 11036
+    },
+    {
+      "source": "docs/WARD_INTERVAL_CONTEXT_20261021.md",
+      "target": "docs/legacy/WARD_INTERVAL_CONTEXT_20261021.md",
+      "source_sha256": "4f592c0105118e9768ee0182b80047df12c982462739eb7973f72cd5cd4d8cf4",
+      "export_sha256": "4f592c0105118e9768ee0182b80047df12c982462739eb7973f72cd5cd4d8cf4",
+      "bytes": 8276
+    },
+    {
+      "source": "docs/WARD_INTERVAL_PHASES_20261021.md",
+      "target": "docs/legacy/WARD_INTERVAL_PHASES_20261021.md",
+      "source_sha256": "a98fd8eb3329be2179a3cb43ee9957ce29e757265916e22061db1afe172e92d9",
+      "export_sha256": "a98fd8eb3329be2179a3cb43ee9957ce29e757265916e22061db1afe172e92d9",
+      "bytes": 7650
+    },
+    {
+      "source": "docs/WARD_OBJECTIVE_OPPORTUNITIES_20261021.md",
+      "target": "docs/legacy/WARD_OBJECTIVE_OPPORTUNITIES_20261021.md",
+      "source_sha256": "6513616a098fadd2c49a710a53c8ec90c3ee8b69f8ec84d41c846e8cb94bf503",
+      "export_sha256": "6513616a098fadd2c49a710a53c8ec90c3ee8b69f8ec84d41c846e8cb94bf503",
+      "bytes": 5923
+    },
+    {
+      "source": "docs/WARD_OBJECTIVE_REGIONS_20261021.md",
+      "target": "docs/legacy/WARD_OBJECTIVE_REGIONS_20261021.md",
+      "source_sha256": "264c3cea7ce81989a301a718d3f69e84b5233c0f6979409c4fbef961e194caaf",
+      "export_sha256": "264c3cea7ce81989a301a718d3f69e84b5233c0f6979409c4fbef961e194caaf",
+      "bytes": 6841
+    },
+    {
+      "source": "docs/WARD_OBSERVATIONS_V1.md",
+      "target": "docs/legacy/WARD_OBSERVATIONS_V1.md",
+      "source_sha256": "4fb5dc71a1b89024444f4c0ad0c3dfc813a09161dadb8b5082099333f45a5d64",
+      "export_sha256": "4fb5dc71a1b89024444f4c0ad0c3dfc813a09161dadb8b5082099333f45a5d64",
+      "bytes": 14171
+    },
+    {
+      "source": "docs/WARD_PHASE_CONTEXT_20261022.md",
+      "target": "docs/legacy/WARD_PHASE_CONTEXT_20261022.md",
+      "source_sha256": "09e354f86af6d291614b43c2b67b284647bd795831339ea7ecd6e5189c3cf65e",
+      "export_sha256": "09e354f86af6d291614b43c2b67b284647bd795831339ea7ecd6e5189c3cf65e",
+      "bytes": 5582
+    },
+    {
+      "source": "docs/WARD_PLACEMENT_SEQUENCES_20261021.md",
+      "target": "docs/legacy/WARD_PLACEMENT_SEQUENCES_20261021.md",
+      "source_sha256": "35eb26bfff7543794fb30a9da4e528e648ed2b06b48134b3cee8eff2b2d9bb9d",
+      "export_sha256": "35eb26bfff7543794fb30a9da4e528e648ed2b06b48134b3cee8eff2b2d9bb9d",
+      "bytes": 4861
+    },
+    {
+      "source": "docs/WARD_REGION_STABILITY_20261021.md",
+      "target": "docs/legacy/WARD_REGION_STABILITY_20261021.md",
+      "source_sha256": "b028ff541222d2df7cf54c812dc4be53088724e2bba6a8c1c26d9ca2510c9735",
+      "export_sha256": "b028ff541222d2df7cf54c812dc4be53088724e2bba6a8c1c26d9ca2510c9735",
+      "bytes": 4989
+    },
+    {
+      "source": "docs/WARD_REVISITS_20261021.md",
+      "target": "docs/legacy/WARD_REVISITS_20261021.md",
+      "source_sha256": "193d139cd475306d8b8b568b8db179f884f0126a8f55bc9e0526a1365fb741b4",
+      "export_sha256": "193d139cd475306d8b8b568b8db179f884f0126a8f55bc9e0526a1365fb741b4",
+      "bytes": 5062
+    },
+    {
+      "source": "docs/WARD_SEQUENCE_CONTEXT_20261022.md",
+      "target": "docs/legacy/WARD_SEQUENCE_CONTEXT_20261022.md",
+      "source_sha256": "4e66cc67d6e83b76f104474693be907eec05fedb41b62c132815dcda733eb828",
+      "export_sha256": "4e66cc67d6e83b76f104474693be907eec05fedb41b62c132815dcda733eb828",
+      "bytes": 6855
+    },
+    {
+      "source": "docs/WARD_SINGLE_MATCH_SENSITIVITY_20261022.md",
+      "target": "docs/legacy/WARD_SINGLE_MATCH_SENSITIVITY_20261022.md",
+      "source_sha256": "1509a00bc9a7e58e2cf396b4175c8843cfdadd7a7e0dc875059be30db859c201",
+      "export_sha256": "1509a00bc9a7e58e2cf396b4175c8843cfdadd7a7e0dc875059be30db859c201",
+      "bytes": 3698
+    },
+    {
+      "source": "docs/WARD_TEAM_PHASE_STATES_20261021.md",
+      "target": "docs/legacy/WARD_TEAM_PHASE_STATES_20261021.md",
+      "source_sha256": "dded97637a569edc8a9187e055ac66ba57a4d5efef5393bc2d4349e7cc504a66",
+      "export_sha256": "dded97637a569edc8a9187e055ac66ba57a4d5efef5393bc2d4349e7cc504a66",
+      "bytes": 5312
+    },
+    {
+      "source": "docs/WARD_TIME_CONTROLS_20261021.md",
+      "target": "docs/legacy/WARD_TIME_CONTROLS_20261021.md",
+      "source_sha256": "e25ff55876c0038bc9d2eea6d67ffceafc48460352e11d685de89c8544d60601",
+      "export_sha256": "e25ff55876c0038bc9d2eea6d67ffceafc48460352e11d685de89c8544d60601",
+      "bytes": 6844
+    },
+    {
+      "source": "docs/WARD_VALIDATION_DEVELOPMENT_20261023.md",
+      "target": "docs/legacy/WARD_VALIDATION_DEVELOPMENT_20261023.md",
+      "source_sha256": "7b7a972573de55a06f445516170dad17bf43eff6d0ba3a58c490eaa0ae01e6a3",
+      "export_sha256": "7b7a972573de55a06f445516170dad17bf43eff6d0ba3a58c490eaa0ae01e6a3",
+      "bytes": 5185
+    },
+    {
+      "source": "docs/WARD_VALIDATION_HANDOFF_20261023.md",
+      "target": "docs/legacy/WARD_VALIDATION_HANDOFF_20261023.md",
+      "source_sha256": "d7054c6320f1ef2b4a27c0c230a4f22e138545aa8a9314fbff73bb2cc75ad976",
+      "export_sha256": "d7054c6320f1ef2b4a27c0c230a4f22e138545aa8a9314fbff73bb2cc75ad976",
+      "bytes": 4808
+    },
+    {
+      "source": "docs/WARD_VALIDATION_SOURCES_20261023.md",
+      "target": "docs/legacy/WARD_VALIDATION_SOURCES_20261023.md",
+      "source_sha256": "c454ffef13b1d0e1b2080ebcd13fc52f8d711dc4dc3065aac17bf161d5833e21",
+      "export_sha256": "c454ffef13b1d0e1b2080ebcd13fc52f8d711dc4dc3065aac17bf161d5833e21",
+      "bytes": 4142
+    },
+    {
+      "source": "docs/WINDOWS_WARD_AND_MAIN_STATUS_20261010.md",
+      "target": "docs/legacy/WINDOWS_WARD_AND_MAIN_STATUS_20261010.md",
+      "source_sha256": "57322c340616979747263eae1b5cd6929481714e55834a306641820c969e009d",
+      "export_sha256": "57322c340616979747263eae1b5cd6929481714e55834a306641820c969e009d",
+      "bytes": 4813
+    },
+    {
+      "source": "dota2_economy/audio_listening_review.py",
+      "target": "dota2_insights/audio_listening_review.py",
+      "source_sha256": "8f7ea3212bbea602dbe0b99368ee373b2db7bd76ed59bc5e3c9cc4fc6657cd57",
+      "export_sha256": "8f7ea3212bbea602dbe0b99368ee373b2db7bd76ed59bc5e3c9cc4fc6657cd57",
+      "bytes": 16301
+    },
+    {
+      "source": "tests/test_audio_listening_review.py",
+      "target": "tests/test_audio_listening_review.py",
+      "source_sha256": "8a2ce4365825b803b824f89e81362f7a2f9865c416cfc2cd379956801bc440c3",
+      "export_sha256": "fc8873142ee437a51e9a14c2a78fa950d5669a1a979df027d600e81626421f6a",
+      "bytes": 18518
+    },
+    {
+      "source": "tools/review_audio_listening.py",
+      "target": "tools/review_audio_listening.py",
+      "source_sha256": "5508f14fdc3c20f42d035cabb8ce7562546ae1f534a1f422d269999279f3d835",
+      "export_sha256": "327db50f3cc5896520cb969c324bb696a2d54d4ff108fe2eba15ff54654e838e",
+      "bytes": 1448
+    },
+    {
+      "source": "dota2_economy/pi_context_expansion.py",
+      "target": "dota2_insights/pi_context_expansion.py",
+      "source_sha256": "051efe1ed76d9bb05d2c8b3c337d8a409f82207aeed5d037207efec206d8c5d4",
+      "export_sha256": "3e66e6c4af92ce6a40157071e32d181ce7985e4aa423e7b63e79331c846f2c05",
+      "bytes": 24283
+    },
+    {
+      "source": "dota2_economy/pi_replay_library.py",
+      "target": "dota2_insights/pi_replay_library.py",
+      "source_sha256": "ae58b40815947b1676c3c01cb0405fe93b55009ef838ae8b57cb88d2e2004b4b",
+      "export_sha256": "3f3b24a0b87211ea2db6be5388a75e9c6a7de4313fcf279b8e63480fb1fc169b",
+      "bytes": 15987
+    },
+    {
+      "source": "dota2_economy/recording_metadata.py",
+      "target": "dota2_insights/recording_metadata.py",
+      "source_sha256": "f019090d0af5e2d1d0f6fe5a189798404d25a8ca3a6f37a9df9e5dc77d34423c",
+      "export_sha256": "f019090d0af5e2d1d0f6fe5a189798404d25a8ca3a6f37a9df9e5dc77d34423c",
+      "bytes": 4772
+    },
+    {
+      "source": "dota2_economy/replay_library_store.py",
+      "target": "dota2_insights/replay_library_store.py",
+      "source_sha256": "6e2a0e51a32ff0d844a9f7cf77dff4849cb82b201f3df592a444b422b995b827",
+      "export_sha256": "32914c4ed8658849017a734bfbd7076b84835a51d498ec15861ed2b0bafe3dbc",
+      "bytes": 42439
+    },
+    {
+      "source": "dota2_minimap/context_archive.py",
+      "target": "dota2_insights/minimap/context_archive.py",
+      "source_sha256": "2d742e02d5a20288cc2998801f80b26200e57508f3857f5aa5ef2fd8accba9cd",
+      "export_sha256": "2d742e02d5a20288cc2998801f80b26200e57508f3857f5aa5ef2fd8accba9cd",
+      "bytes": 30263
+    },
+    {
+      "source": "tools/build_postgame_context_store.py",
+      "target": "tools/build_postgame_context_store.py",
+      "source_sha256": "edb9c2eb361822f5d27a3ca18ee8b037aca60d565137ad46de4d7d5bc478c7da",
+      "export_sha256": "8cb1f5cf36e5c5e55be0ae9e9798341b387ecc19870bfd55e6eff2c282965596",
+      "bytes": 2650
+    },
+    {
+      "source": "tools/build_postgame_evidence_store.py",
+      "target": "tools/build_postgame_evidence_store.py",
+      "source_sha256": "937c1929712ee2bf8144ef3f411eb651e23715aac297d8452a83d4274e9446a5",
+      "export_sha256": "646f82c43e3d7b4d9acc38cf74b25b4165eaf1bc9407a26b9ae30e6747b1e702",
+      "bytes": 2483
+    },
+    {
+      "source": "tools/build_postgame_metadata_store.py",
+      "target": "tools/build_postgame_metadata_store.py",
+      "source_sha256": "8cd0f74119aa9cb309ae70107814cb90b432d406ae4d6df61dc98a868d0d7470",
+      "export_sha256": "eaccb0e4151659f6f9bc72e3417b0fc6a392574da5ba47e91cc874b394bdc36f",
+      "bytes": 2133
+    },
+    {
+      "source": "tools/build_postgame_patterns.py",
+      "target": "tools/build_postgame_patterns.py",
+      "source_sha256": "55a7e7db111804135af0d441cba28d850c42729f376c6e15c0e2fa8111ce614a",
+      "export_sha256": "6a0cd011688058307a1577a5715a47d04e671bd359e660214c586f91dfa7f42a",
+      "bytes": 2625
+    },
+    {
+      "source": "tools/collect_pi_context_review.py",
+      "target": "tools/collect_pi_context_review.py",
+      "source_sha256": "197a6bb7a217a1c27f2f83328bd72b38a5241b5121b344ae623908429f1c2be6",
+      "export_sha256": "fd429cb55d1b120f403d1dc88c192339ae31b266734b7ae6c9ab8552395d8825",
+      "bytes": 13027
+    },
+    {
+      "source": "tools/manage_pi_context_expansion.py",
+      "target": "tools/manage_pi_context_expansion.py",
+      "source_sha256": "15069a4f528e77a0da416d9bced2e2fe72e6756378309fb4dd6900bc82491364",
+      "export_sha256": "92927d18762819ef57ed56585d52eac2a97ee90ba0c764fa47eb9a87b6f18b08",
+      "bytes": 1577
+    },
+    {
+      "source": "tools/manage_pi_replays.py",
+      "target": "tools/manage_pi_replays.py",
+      "source_sha256": "71c91f6c8c557f654e197cc2ee3bab72376a79e93bc187be01f5f97e11142129",
+      "export_sha256": "9755722427d2466cb3d0686c6efaff02f20348077989a354e1a24653bf22fc6b",
+      "bytes": 1099
+    },
+    {
+      "source": "tools/pi_ward_worker.py",
+      "target": "tools/pi_ward_worker.py",
+      "source_sha256": "8e41f2f74d62da5e9f4df2581febafbf6de07b7c20bd73d155edfc59cfffb1d8",
+      "export_sha256": "8e41f2f74d62da5e9f4df2581febafbf6de07b7c20bd73d155edfc59cfffb1d8",
+      "bytes": 4731
+    },
+    {
+      "source": "tools/prepare_match_audio_review.py",
+      "target": "tools/prepare_match_audio_review.py",
+      "source_sha256": "95cab703aff923a6a71712714bb6eb573d6f9da971645a2b2306f05cd03690f5",
+      "export_sha256": "95cab703aff923a6a71712714bb6eb573d6f9da971645a2b2306f05cd03690f5",
+      "bytes": 4329
+    },
+    {
+      "source": "tools/prepare_minimap_context.py",
+      "target": "tools/prepare_minimap_context.py",
+      "source_sha256": "781a34fae0b2c4a6c95eec3c574cab68778e91116bee06169d8c781d164441da",
+      "export_sha256": "06953e03d07e9adac7b82b6a63715be3d3551022fff4fd0d603644639904fdda",
+      "bytes": 3205
+    },
+    {
+      "source": "tools/review_postgame_building_geometry.py",
+      "target": "tools/review_postgame_building_geometry.py",
+      "source_sha256": "e51047fe8bc0ff61d11717560ecc7e16dd8e957e93bad465a9f0144f5066ca3f",
+      "export_sha256": "f7bb2553d61aa4eb6e3950b7a888e839250cd519b094f7a94a3eb9c7ee8e6cd9",
+      "bytes": 1071
+    },
+    {
+      "source": "tools/review_postgame_capture.py",
+      "target": "tools/review_postgame_capture.py",
+      "source_sha256": "7af64ebd24cc5b25b98b6c0e4d564839c3e4d43e61f4a56a4d4e923d26b42556",
+      "export_sha256": "ac5a886adeb378b3c06cb61f717a8da1c426e8b3cb65b775af89be2276338d5d",
+      "bytes": 920
+    },
+    {
+      "source": "tools/review_postgame_context_store.py",
+      "target": "tools/review_postgame_context_store.py",
+      "source_sha256": "a48f2a3c6333b02f90cb46f71a95b5d425c45f52c729a60d356318b4e33ceff2",
+      "export_sha256": "333426b4205480ce3a2ebd348cb22406a5a68f163414b37e3eb0d6051c525ed4",
+      "bytes": 15059
+    },
+    {
+      "source": "tests/test_ward_review_batch.py",
+      "target": "tests/test_ward_review_batch.py",
+      "source_sha256": "e0d803e27888c129267086f5032a331ebcdf74d2f58b6b44b799b1089a09d4ab",
+      "export_sha256": "2b5d14378dd732a275951f392706b1b3d90addac7520c4faef3aee07c69b29c5",
+      "bytes": 11693
+    },
+    {
+      "source": "tools/manage_pi_building_landmarks.py",
+      "target": "tools/manage_pi_building_landmarks.py",
+      "source_sha256": "b821b1dcf1efe1ab772f482a2661243c761ddb342918a59e69fda8247261baef",
+      "export_sha256": "4da339630efeac791b35fb02e03a0400ae6368afbc4361655df24e13ce600b1b",
+      "bytes": 10334
+    },
+    {
+      "source": "tools/probe_replay_metadata.py",
+      "target": "tools/probe_replay_metadata.py",
+      "source_sha256": "09ac306a5d3330e8a1a085da0cba6c87ec101810c1c001bb03c4354ec6c1f15c",
+      "export_sha256": "81b9b5770d30d90607972905e8380255078b33d147bcfdd6a003726ffa0fdfa0",
+      "bytes": 1372
+    },
+    {
+      "source": "tools/plan_replay_metadata_batch.py",
+      "target": "tools/plan_replay_metadata_batch.py",
+      "source_sha256": "f419a1badd825f2695e180f7325a347250aa6214d29002f8acd1ea3abc577392",
+      "export_sha256": "4573ce6d3d50b19414bb1907e90a8f47fb3705c272260bed5aa1f2f27d887983",
+      "bytes": 4255
+    }
+  ],
+  "tests": [
+    "test_map_holdout.py",
+    "test_replay_audio_scan_diagnostics.py",
+    "test_replay_death_semantics.py",
+    "test_replay_fact_review.py",
+    "test_replay_periods.py",
+    "test_replay_phase_evidence.py",
+    "test_replay_runtime.py",
+    "test_replay_workbench.py",
+    "test_ward_release_readiness.py",
+    "test_ward_validation_freeze.py",
+    "test_ward_validation_gap_scan.py",
+    "test_ward_validation_inventory.py",
+    "test_ward_validation_observations.py",
+    "test_ward_validation_package.py",
+    "test_ward_validation_sampling.py",
+    "test_audio_listening_review.py",
+    "test_ward_review_batch.py"
+  ],
+  "history_payloads_copied": false,
+  "history_payloads_moved_or_deleted": false,
+  "source_files_removed": false,
+  "license_grant_inferred": false
+}

@@ -1,0 +1,389 @@
+{
+  "source": "valve_installed_item_costs_and_retained_opendota_catalog",
+  "refreshed_at": "2026-10-08T23:50:39.598497+00:00",
+  "item_count": 295,
+  "cache_sha256": "3f4eb0183ace5479ace6b11f02c9fb43fe04ab8c83e381f9c421202aa30d93c4",
+  "base_catalog": {
+    "source": "https://api.opendota.com/api/constants/items",
+    "refreshed_at": "2026-09-12T10:56:26.932393+00:00",
+    "item_count": 294,
+    "sha256": "adfd64ee39162ade777442f150c80bc79e2f246a4c72373e6cf10d609d4531a6"
+  },
+  "validated_price_source": {
+    "provider": "Valve",
+    "resource": "scripts/npc/items.txt",
+    "source_sha256": "04c432155f6c89c7277a76c8cfb72ff96a6b0d908969a03efc15f41ac1694d6e",
+    "source_crc32": 1875167100,
+    "directory_sha256": "a02fb6601418b661f02f9eecf848ee0b1e1bc69e3b8f39888ed2ee1877c4e49e",
+    "steam_build_id": "25790067",
+    "client_version": "6954",
+    "source_revision": "11101030",
+    "semantic_game_version": null,
+    "validated_at_utc": "2026-10-08T23:50:39.598497+00:00",
+    "current_price_count": 267,
+    "changed_costs": [
+      {
+        "item_id": "hurricane_pike",
+        "catalog_numeric_id": 263,
+        "previous_cost": 4450,
+        "source_cost": 4550,
+        "source_line": 4993
+      },
+      {
+        "item_id": "recipe_dagon",
+        "catalog_numeric_id": 103,
+        "previous_cost": 1150,
+        "source_cost": 1100,
+        "source_line": 5045
+      },
+      {
+        "item_id": "dagon",
+        "catalog_numeric_id": 104,
+        "previous_cost": 3050,
+        "source_cost": 3000,
+        "source_line": 5153
+      },
+      {
+        "item_id": "dagon_2",
+        "catalog_numeric_id": 201,
+        "previous_cost": 4200,
+        "source_cost": 4100,
+        "source_line": 5196
+      },
+      {
+        "item_id": "dagon_3",
+        "catalog_numeric_id": 202,
+        "previous_cost": 5350,
+        "source_cost": 5200,
+        "source_line": 5239
+      },
+      {
+        "item_id": "dagon_4",
+        "catalog_numeric_id": 203,
+        "previous_cost": 6500,
+        "source_cost": 6300,
+        "source_line": 5282
+      },
+      {
+        "item_id": "dagon_5",
+        "catalog_numeric_id": 204,
+        "previous_cost": 7650,
+        "source_cost": 7400,
+        "source_line": 5325
+      },
+      {
+        "item_id": "recipe_heart",
+        "catalog_numeric_id": 113,
+        "previous_cost": 600,
+        "source_cost": 800,
+        "source_line": 5931
+      },
+      {
+        "item_id": "heart",
+        "catalog_numeric_id": 114,
+        "previous_cost": 5100,
+        "source_cost": 5300,
+        "source_line": 5955
+      },
+      {
+        "item_id": "recipe_shivas_guard",
+        "catalog_numeric_id": 118,
+        "previous_cost": 1350,
+        "source_cost": 1250,
+        "source_line": 6084
+      },
+      {
+        "item_id": "recipe_greater_crit",
+        "catalog_numeric_id": 140,
+        "previous_cost": 900,
+        "source_cost": 1000,
+        "source_line": 7623
+      },
+      {
+        "item_id": "greater_crit",
+        "catalog_numeric_id": 141,
+        "previous_cost": 5100,
+        "source_cost": 5200,
+        "source_line": 7647
+      },
+      {
+        "item_id": "recipe_dragon_lance",
+        "catalog_numeric_id": 234,
+        "previous_cost": 450,
+        "source_cost": 550,
+        "source_line": 7931
+      },
+      {
+        "item_id": "dragon_lance",
+        "catalog_numeric_id": 236,
+        "previous_cost": 1900,
+        "source_cost": 2000,
+        "source_line": 7955
+      },
+      {
+        "item_id": "recipe_gungir",
+        "catalog_numeric_id": 1565,
+        "previous_cost": 400,
+        "source_cost": 300,
+        "source_line": 8791
+      },
+      {
+        "item_id": "recipe_octarine_core",
+        "catalog_numeric_id": 228,
+        "previous_cost": 200,
+        "source_cost": 400,
+        "source_line": 9399
+      },
+      {
+        "item_id": "octarine_core",
+        "catalog_numeric_id": 235,
+        "previous_cost": 4900,
+        "source_cost": 5100,
+        "source_line": 9422
+      },
+      {
+        "item_id": "recipe_heavens_halberd",
+        "catalog_numeric_id": 209,
+        "previous_cost": 450,
+        "source_cost": 350,
+        "source_line": 10637
+      },
+      {
+        "item_id": "heavens_halberd",
+        "catalog_numeric_id": 210,
+        "previous_cost": 3400,
+        "source_cost": 3300,
+        "source_line": 10661
+      },
+      {
+        "item_id": "recipe_hydras_breath",
+        "catalog_numeric_id": 1857,
+        "previous_cost": 1100,
+        "source_cost": 1000,
+        "source_line": 17028
+      },
+      {
+        "item_id": "chasm_stone",
+        "catalog_numeric_id": 1872,
+        "previous_cost": 800,
+        "source_cost": 900,
+        "source_line": 17788
+      }
+    ],
+    "historical_preserved": [
+      {
+        "item_id": "quarterstaff",
+        "reasons": [
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "stout_shield",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "cheese",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "royale_with_cheese",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "ward_dispenser",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "tango_single",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "courier",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "flying_courier",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "cornucopia",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "recipe_wraith_pact",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "wraith_pact",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "caster_rapier",
+        "reasons": [
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "recipe_necronomicon",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "necronomicon",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "necronomicon_2",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "necronomicon_3",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "ultimate_scepter_roshan",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "aghanims_shard_roshan",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "trident",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "refresher_shard",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "recipe_eternal_shroud",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "eternal_shroud",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "tome_of_knowledge",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "recipe_iron_talon",
+        "reasons": [
+          "not_purchasable",
+          "obsolete"
+        ]
+      },
+      {
+        "item_id": "pocket_roshan",
+        "reasons": [
+          "not_purchasable"
+        ]
+      },
+      {
+        "item_id": "recipe_trident",
+        "reasons": [
+          "not_purchasable"
+        ]
+      }
+    ],
+    "missing_definition_preserved": [
+      "diffusal_blade_2"
+    ],
+    "meaning": "explicit current positive ItemCost only; retains catalog IDs/names, nonpurchasable/obsolete/missing entries; no recipe inference or semantic patch binding"
+  },
+  "validated_zero_cost_items": [
+    {
+      "item_id": "ward_observer",
+      "numeric_id": 42,
+      "cost": 0,
+      "price_source": {
+        "resource": "scripts/npc/items.txt",
+        "source_sha256": "04c432155f6c89c7277a76c8cfb72ff96a6b0d908969a03efc15f41ac1694d6e",
+        "resource_crc32": 1875167100,
+        "directory_sha256": "a8b9f6baaae45d85c63035f3a0fd5ad7c2dcef9497f312619ae49dae07681431",
+        "definition_line": 2123,
+        "fields": {
+          "ItemCost": "0"
+        }
+      },
+      "numeric_id_source": {
+        "source_url": "https://api.opendota.com/api/constants/items",
+        "fetched_at_utc": "2026-10-10T06:45:04.933239+00:00",
+        "response_sha256": "d814ba42282c9423780a780fd45b4bda0a732e0e5266700231febc4ac7f670d9",
+        "item": {
+          "id": 42,
+          "dname": "Observer Ward",
+          "cost": 0
+        }
+      },
+      "icon_source": {
+        "item_id": "ward_observer",
+        "resource": "panorama/images/items/ward_observer_png.vtex_c",
+        "resource_crc32": 28278073,
+        "resource_sha256": "952f2c290462a25eecd3f7068f7d282358f433c4a57399be8d28a4722773f641",
+        "source_archive": "pak01_177.vpk",
+        "source_archive_sha256": "9f420117ada2c2ebf5072ef11a28f65647d22b7c16dcf6e89c665cb04432e66d",
+        "png_sha256": "b40196c4352ebca9a751b2b3f3fc0cb6df34001583a95286e47db5526ffc99aa",
+        "shape": [
+          64,
+          88,
+          3
+        ]
+      }
+    }
+  ]
+}

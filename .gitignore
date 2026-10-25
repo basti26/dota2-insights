@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.venv/
+.replay-deps/
+.pytest_cache/
+config/*.local.json
+diagnostics/
+dist/
+build/
+runtime/
+*.dem
+*.dem.bz2
+*.wav
+*.mp4
+*.log
+*.spec
+.env
+*.pem
+*.key
+# Historical notes are retained locally, not republished as current guidance.
+/docs/legacy/*
+!/docs/legacy/README.md

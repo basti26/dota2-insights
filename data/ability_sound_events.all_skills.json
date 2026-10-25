@@ -1,0 +1,937 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "hero": "abyssal_underlord",
+      "skill": "abyssal_underlord_dark_portal",
+      "events": [
+        "Hero_Underlord.Portal.Spawn",
+        "Hero_Underlord.Portal.Destroy"
+      ]
+    },
+    {
+      "hero": "alchemist",
+      "skill": "alchemist_chemical_rage",
+      "events": [
+        "Hero_Alchemist.ChemicalRage"
+      ]
+    },
+    {
+      "hero": "antimage",
+      "skill": "antimage_mana_void",
+      "events": [
+        "Hero_Antimage.ManaVoid"
+      ]
+    },
+    {
+      "hero": "centaur",
+      "skill": "centaur_stampede",
+      "events": [
+        "Hero_Centaur.Stampede"
+      ]
+    },
+    {
+      "hero": "chaos_knight",
+      "skill": "chaos_knight_phantasm",
+      "events": [
+        "Hero_ChaosKnight.Phantasm"
+      ]
+    },
+    {
+      "hero": "dawnbreaker",
+      "skill": "dawnbreaker_solar_guardian",
+      "events": [
+        "Hero_Dawnbreaker.Solar_Guardian"
+      ]
+    },
+    {
+      "hero": "doom_bringer",
+      "file_hero": "doombringer",
+      "skill": "doom_bringer_doom",
+      "events": [
+        "Hero_DoomBringer.Doom"
+      ]
+    },
+    {
+      "hero": "dragon_knight",
+      "skill": "dragon_knight_elder_dragon_form",
+      "events": [
+        "Hero_DragonKnight.ElderDragonForm"
+      ]
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_magnetize",
+      "events": [
+        "Hero_EarthSpirit.Magnetize"
+      ]
+    },
+    {
+      "hero": "elder_titan",
+      "skill": "elder_titan_earth_splitter",
+      "events": [
+        "Hero_ElderTitan.EarthSplitter"
+      ]
+    },
+    {
+      "hero": "enigma",
+      "skill": "enigma_black_hole",
+      "events": [
+        "Hero_Enigma.Black_Hole",
+        "Hero_Enigma.BlackHole"
+      ]
+    },
+    {
+      "hero": "kunkka",
+      "skill": "kunkka_ghostship",
+      "events": [
+        "Ability.Ghostship",
+        "Hero_Kunkka.SharkBell",
+        "Hero_Kunkka.SharkShip"
+      ]
+    },
+    {
+      "hero": "legion_commander",
+      "skill": "legion_commander_duel",
+      "events": [
+        "Hero_LegionCommander.Duel"
+      ]
+    },
+    {
+      "hero": "life_stealer",
+      "skill": "life_stealer_infest",
+      "events": [
+        "Hero_LifeStealer.Infest",
+        "Hero_LifeStealer.Consume"
+      ]
+    },
+    {
+      "hero": "lycan",
+      "skill": "lycan_shapeshift",
+      "events": [
+        "Hero_Lycan.Shapeshift"
+      ]
+    },
+    {
+      "hero": "magnataur",
+      "skill": "magnataur_reverse_polarity",
+      "events": [
+        "Hero_Magnataur.ReversePolarity"
+      ]
+    },
+    {
+      "hero": "mars",
+      "skill": "mars_arena_of_blood",
+      "events": [
+        "Hero_Mars.ArenaOfBlood"
+      ]
+    },
+    {
+      "hero": "night_stalker",
+      "file_hero": "nightstalker",
+      "skill": "night_stalker_darkness",
+      "events": [
+        "Hero_Nightstalker.Darkness"
+      ]
+    },
+    {
+      "hero": "omniknight",
+      "skill": "omniknight_guardian_angel",
+      "events": [
+        "Hero_Omniknight.GuardianAngel"
+      ]
+    },
+    {
+      "hero": "phoenix",
+      "skill": "phoenix_supernova",
+      "events": [
+        "Hero_Phoenix.SuperNova"
+      ]
+    },
+    {
+      "hero": "primal_beast",
+      "skill": "primal_beast_pulverize",
+      "events": [
+        "Hero_PrimalBeast.Pulverize"
+      ]
+    },
+    {
+      "hero": "pudge",
+      "skill": "pudge_dismember",
+      "events": [
+        "Hero_Pudge.Dismember"
+      ]
+    },
+    {
+      "hero": "rattletrap",
+      "skill": "rattletrap_hookshot",
+      "events": [
+        "Hero_Rattletrap.Hookshot"
+      ]
+    },
+    {
+      "hero": "skeleton_king",
+      "file_hero": "skeletonking",
+      "skill": "skeleton_king_reincarnation",
+      "events": [
+        "Hero_SkeletonKing.Reincarnate"
+      ]
+    },
+    {
+      "hero": "spirit_breaker",
+      "skill": "spirit_breaker_nether_strike",
+      "events": [
+        "Hero_Spirit_Breaker.NetherStrike"
+      ]
+    },
+    {
+      "hero": "sven",
+      "skill": "sven_gods_strength",
+      "events": [
+        "Hero_Sven.GodsStrength",
+        "Hero_Sven.Layer.GodsStrength"
+      ]
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_ravage",
+      "events": [
+        "Ability.Ravage",
+        "Hero_Tidehunter.Ravage.Arcana"
+      ]
+    },
+    {
+      "hero": "treant",
+      "skill": "treant_overgrowth",
+      "events": [
+        "Hero_Treant.Overgrowth"
+      ]
+    },
+    {
+      "hero": "undying",
+      "skill": "undying_flesh_golem",
+      "events": [
+        "Hero_Undying.FleshGolem"
+      ]
+    },
+    {
+      "hero": "zuus",
+      "skill": "zuus_thundergods_wrath",
+      "events": [
+        "Hero_Zuus.GodsWrath"
+      ]
+    },
+    {
+      "hero": "abyssal_underlord",
+      "skill": "abyssal_underlord_pit_of_malice",
+      "events": [
+        "Hero_AbyssalUnderlord.PitOfMalice"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_abyssal_underlord.txt",
+      "definition_sha256": "31060e5fdf53b01592b172f9f40a1113f9b8af09b3494750bbe881f34461a5d8",
+      "declared_ability_sound": "Hero_AbyssalUnderlord.PitOfMalice"
+    },
+    {
+      "hero": "alchemist",
+      "skill": "alchemist_unstable_concoction",
+      "events": [
+        "Hero_Alchemist.UnstableConcoction.Fuse"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_alchemist.txt",
+      "definition_sha256": "865e2108c580ac9ea8819c4378d16bf49031d71b2fe9dbdd64a7f5951e1a6ba3",
+      "declared_ability_sound": "Hero_Alchemist.UnstableConcoction.Fuse"
+    },
+    {
+      "hero": "antimage",
+      "skill": "antimage_blink",
+      "events": [
+        "Hero_Antimage.Blink_out"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_antimage.txt",
+      "definition_sha256": "9869855c4c0eabf440c00c8bf677ceb4fc14cb518084fe7eb01406238caa3f36",
+      "declared_ability_sound": "Hero_Antimage.Blink_out"
+    },
+    {
+      "hero": "antimage",
+      "skill": "antimage_mana_break",
+      "events": [
+        "Hero_Antimage.ManaBreak"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_antimage.txt",
+      "definition_sha256": "9869855c4c0eabf440c00c8bf677ceb4fc14cb518084fe7eb01406238caa3f36",
+      "declared_ability_sound": "Hero_Antimage.ManaBreak"
+    },
+    {
+      "hero": "centaur",
+      "skill": "centaur_double_edge",
+      "events": [
+        "Hero_Centaur.DoubleEdge"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_centaur.txt",
+      "definition_sha256": "33c8ac9381898217373bea1d5deea95c33504e9e40505d64c64f3b8f0bac6404",
+      "declared_ability_sound": "Hero_Centaur.DoubleEdge"
+    },
+    {
+      "hero": "centaur",
+      "skill": "centaur_hoof_stomp",
+      "events": [
+        "Hero_Centaur.HoofStomp"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_centaur.txt",
+      "definition_sha256": "33c8ac9381898217373bea1d5deea95c33504e9e40505d64c64f3b8f0bac6404",
+      "declared_ability_sound": "Hero_Centaur.HoofStomp"
+    },
+    {
+      "hero": "chaos_knight",
+      "skill": "chaos_knight_chaos_bolt",
+      "events": [
+        "Hero_ChaosKnight.ChaosBolt"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_chaos_knight.txt",
+      "definition_sha256": "d0288fc845f81f0445018401e8d35e4b615ce95656f9024078e1643f083aab47",
+      "declared_ability_sound": "Hero_ChaosKnight.ChaosBolt.Cast"
+    },
+    {
+      "hero": "chaos_knight",
+      "skill": "chaos_knight_chaos_strike",
+      "events": [
+        "Hero_ChaosKnight.ChaosStrike"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_chaos_knight.txt",
+      "definition_sha256": "d0288fc845f81f0445018401e8d35e4b615ce95656f9024078e1643f083aab47",
+      "declared_ability_sound": "Hero_ChaosKnight.ChaosStrike"
+    },
+    {
+      "hero": "chaos_knight",
+      "skill": "chaos_knight_reality_rift",
+      "events": [
+        "Hero_ChaosKnight.RealityRift"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_chaos_knight.txt",
+      "definition_sha256": "d0288fc845f81f0445018401e8d35e4b615ce95656f9024078e1643f083aab47",
+      "declared_ability_sound": "Hero_ChaosKnight.RealityRift"
+    },
+    {
+      "hero": "doom_bringer",
+      "skill": "doom_bringer_devour",
+      "events": [
+        "Hero_DoomBringer.Devour"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_doom_bringer.txt",
+      "definition_sha256": "fcfd0f36839a30217b482a7e9aa12d21b18482c0fcc3a3a5dba9c19c6d473b64",
+      "declared_ability_sound": "Hero_DoomBringer.Devour",
+      "file_hero": "doombringer"
+    },
+    {
+      "hero": "doom_bringer",
+      "skill": "doom_bringer_infernal_blade",
+      "events": [
+        "Hero_DoomBringer.InfernalBlade.Target"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_doom_bringer.txt",
+      "definition_sha256": "fcfd0f36839a30217b482a7e9aa12d21b18482c0fcc3a3a5dba9c19c6d473b64",
+      "declared_ability_sound": "Hero_DoomBringer.InfernalBlade.Target",
+      "file_hero": "doombringer"
+    },
+    {
+      "hero": "doom_bringer",
+      "skill": "doom_bringer_scorched_earth",
+      "events": [
+        "Hero_DoomBringer.ScorchedEarthAura"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_doom_bringer.txt",
+      "definition_sha256": "fcfd0f36839a30217b482a7e9aa12d21b18482c0fcc3a3a5dba9c19c6d473b64",
+      "declared_ability_sound": "Hero_DoomBringer.ScorchedEarthAura",
+      "file_hero": "doombringer"
+    },
+    {
+      "hero": "dragon_knight",
+      "skill": "dragon_knight_breathe_fire",
+      "events": [
+        "Hero_DragonKnight.BreathFire"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_dragon_knight.txt",
+      "definition_sha256": "3dcfc11fbe634effac91207ead048537ffdda6b22ad030c7c097c1d43b3b2043",
+      "declared_ability_sound": "Hero_DragonKnight.BreathFire"
+    },
+    {
+      "hero": "dragon_knight",
+      "skill": "dragon_knight_dragon_tail",
+      "events": [
+        "Hero_DragonKnight.DragonTail.Target"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_dragon_knight.txt",
+      "definition_sha256": "3dcfc11fbe634effac91207ead048537ffdda6b22ad030c7c097c1d43b3b2043",
+      "declared_ability_sound": "Hero_DragonKnight.DragonTail.Target"
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_boulder_smash",
+      "events": [
+        "Hero_EarthSpirit.BoulderSmash.Target"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_earth_spirit.txt",
+      "definition_sha256": "c2aebda190fbc46d113e26cfd11517c218da8f89df0db1a3890c2336c9ea9f65",
+      "declared_ability_sound": "Hero_EarthSpirit.BoulderSmash.Target"
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_geomagnetic_grip",
+      "events": [
+        "Hero_EarthSpirit.GeomagneticGrip.Target"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_earth_spirit.txt",
+      "definition_sha256": "c2aebda190fbc46d113e26cfd11517c218da8f89df0db1a3890c2336c9ea9f65",
+      "declared_ability_sound": "Hero_EarthSpirit.GeomagneticGrip.Target"
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_petrify",
+      "events": [
+        "Hero_EarthSpirit.Petrify"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_earth_spirit.txt",
+      "definition_sha256": "c2aebda190fbc46d113e26cfd11517c218da8f89df0db1a3890c2336c9ea9f65",
+      "declared_ability_sound": "Hero_EarthSpirit.Petrify"
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_rolling_boulder",
+      "events": [
+        "Hero_EarthSpirit.RollingBoulder"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_earth_spirit.txt",
+      "definition_sha256": "c2aebda190fbc46d113e26cfd11517c218da8f89df0db1a3890c2336c9ea9f65",
+      "declared_ability_sound": "Hero_EarthSpirit.RollingBoulder.Cast"
+    },
+    {
+      "hero": "earth_spirit",
+      "skill": "earth_spirit_stone_caller",
+      "events": [
+        "Hero_EarthSpirit.StoneRemnant.Impact"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_earth_spirit.txt",
+      "definition_sha256": "c2aebda190fbc46d113e26cfd11517c218da8f89df0db1a3890c2336c9ea9f65",
+      "declared_ability_sound": "Hero_EarthSpirit.StoneRemnant.Impact"
+    },
+    {
+      "hero": "elder_titan",
+      "skill": "elder_titan_ancestral_spirit",
+      "events": [
+        "Hero_ElderTitan.AncestralSpirit"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_elder_titan.txt",
+      "definition_sha256": "8b14ccca63907596520a2c549886df5b2a1e617fc367f48e05e7ea03ec198295",
+      "declared_ability_sound": "Hero_ElderTitan.AncestralSpirit.Cast"
+    },
+    {
+      "hero": "elder_titan",
+      "skill": "elder_titan_echo_stomp",
+      "events": [
+        "Hero_ElderTitan.EchoStomp"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_elder_titan.txt",
+      "definition_sha256": "8b14ccca63907596520a2c549886df5b2a1e617fc367f48e05e7ea03ec198295",
+      "declared_ability_sound": "Hero_ElderTitan.EchoStomp"
+    },
+    {
+      "hero": "enigma",
+      "skill": "enigma_demonic_conversion",
+      "events": [
+        "Hero_Enigma.Demonic_Conversion"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_enigma.txt",
+      "definition_sha256": "82b1997cef2722aed8a519723a1379d6cf90ca4fc3c07c4202aa992a350d643a",
+      "declared_ability_sound": "Hero_Enigma.Demonic_Conversion"
+    },
+    {
+      "hero": "enigma",
+      "skill": "enigma_malefice",
+      "events": [
+        "Hero_Enigma.Malefice"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_enigma.txt",
+      "definition_sha256": "82b1997cef2722aed8a519723a1379d6cf90ca4fc3c07c4202aa992a350d643a",
+      "declared_ability_sound": "Hero_Enigma.Malefice"
+    },
+    {
+      "hero": "enigma",
+      "skill": "enigma_midnight_pulse",
+      "events": [
+        "Hero_Enigma.Midnight_Pulse"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_enigma.txt",
+      "definition_sha256": "82b1997cef2722aed8a519723a1379d6cf90ca4fc3c07c4202aa992a350d643a",
+      "declared_ability_sound": "Hero_Enigma.Midnight_Pulse"
+    },
+    {
+      "hero": "kunkka",
+      "skill": "kunkka_return",
+      "events": [
+        "Ability.XMarksTheSpot.Return"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_kunkka.txt",
+      "definition_sha256": "485e9962fe1fbbc1e59986924f4c6692630309296de25e4eaf1ed77883c0c8fe",
+      "declared_ability_sound": "Ability.XMarksTheSpot.Return"
+    },
+    {
+      "hero": "kunkka",
+      "skill": "kunkka_tidebringer",
+      "events": [
+        "Hero_Kunkka.Tidebringer.Attack"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_kunkka.txt",
+      "definition_sha256": "485e9962fe1fbbc1e59986924f4c6692630309296de25e4eaf1ed77883c0c8fe",
+      "declared_ability_sound": "Hero_Kunkka.Tidebringer.Attack"
+    },
+    {
+      "hero": "kunkka",
+      "skill": "kunkka_torrent",
+      "events": [
+        "Ability.Torrent"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_kunkka.txt",
+      "definition_sha256": "485e9962fe1fbbc1e59986924f4c6692630309296de25e4eaf1ed77883c0c8fe",
+      "declared_ability_sound": "Ability.Torrent"
+    },
+    {
+      "hero": "kunkka",
+      "skill": "kunkka_x_marks_the_spot",
+      "events": [
+        "Ability.XMarksTheSpot.Target"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_kunkka.txt",
+      "definition_sha256": "485e9962fe1fbbc1e59986924f4c6692630309296de25e4eaf1ed77883c0c8fe",
+      "declared_ability_sound": "Ability.XMarksTheSpot.Target"
+    },
+    {
+      "hero": "legion_commander",
+      "skill": "legion_commander_moment_of_courage",
+      "events": [
+        "Hero_LegionCommander.Courage"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_legion_commander.txt",
+      "definition_sha256": "ec4970ab8aebc3af95058990e28ee967f8f4735677fc7e8805ccfaff373b976a",
+      "declared_ability_sound": "Hero_LegionCommander.Courage"
+    },
+    {
+      "hero": "legion_commander",
+      "skill": "legion_commander_overwhelming_odds",
+      "events": [
+        "Hero_LegionCommander.Overwhelming.Location"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_legion_commander.txt",
+      "definition_sha256": "ec4970ab8aebc3af95058990e28ee967f8f4735677fc7e8805ccfaff373b976a",
+      "declared_ability_sound": "Hero_LegionCommander.Overwhelming.Location"
+    },
+    {
+      "hero": "legion_commander",
+      "skill": "legion_commander_press_the_attack",
+      "events": [
+        "Hero_LegionCommander.PressTheAttack"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_legion_commander.txt",
+      "definition_sha256": "ec4970ab8aebc3af95058990e28ee967f8f4735677fc7e8805ccfaff373b976a",
+      "declared_ability_sound": "Hero_LegionCommander.PressTheAttack"
+    },
+    {
+      "hero": "life_stealer",
+      "skill": "life_stealer_consume",
+      "events": [
+        "Hero_LifeStealer.Consume"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_life_stealer.txt",
+      "definition_sha256": "719ac762a3a40c9d5c99ada3b38759b9a0bc6666497f9938e9e8928c215fafe9",
+      "declared_ability_sound": "Hero_LifeStealer.Consume"
+    },
+    {
+      "hero": "life_stealer",
+      "skill": "life_stealer_open_wounds",
+      "events": [
+        "Hero_LifeStealer.OpenWounds"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_life_stealer.txt",
+      "definition_sha256": "719ac762a3a40c9d5c99ada3b38759b9a0bc6666497f9938e9e8928c215fafe9",
+      "declared_ability_sound": "Hero_LifeStealer.OpenWounds.Cast"
+    },
+    {
+      "hero": "life_stealer",
+      "skill": "life_stealer_rage",
+      "events": [
+        "Hero_LifeStealer.Rage"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_life_stealer.txt",
+      "definition_sha256": "719ac762a3a40c9d5c99ada3b38759b9a0bc6666497f9938e9e8928c215fafe9",
+      "declared_ability_sound": "Hero_LifeStealer.Rage"
+    },
+    {
+      "hero": "lycan",
+      "skill": "lycan_howl",
+      "events": [
+        "Hero_Lycan.Howl"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_lycan.txt",
+      "definition_sha256": "ac015ee69c0123f0051d40fb934b13ec3dea38f19fcc485d2aac9fbcd0f97b38",
+      "declared_ability_sound": "Hero_Lycan.Howl"
+    },
+    {
+      "hero": "lycan",
+      "skill": "lycan_summon_wolves",
+      "events": [
+        "Hero_Lycan.SummonWolves"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_lycan.txt",
+      "definition_sha256": "ac015ee69c0123f0051d40fb934b13ec3dea38f19fcc485d2aac9fbcd0f97b38",
+      "declared_ability_sound": "Hero_Lycan.SummonWolves"
+    },
+    {
+      "hero": "magnataur",
+      "skill": "magnataur_empower",
+      "events": [
+        "Hero_Magnataur.Empower"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_magnataur.txt",
+      "definition_sha256": "4438a73d05d4d3fdb257b90ae5678077555c581886c092713f9fbcf3b8b9aa96",
+      "declared_ability_sound": "Hero_Magnataur.Empower.Cast"
+    },
+    {
+      "hero": "magnataur",
+      "skill": "magnataur_skewer",
+      "events": [
+        "Hero_Magnataur.Skewer"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_magnataur.txt",
+      "definition_sha256": "4438a73d05d4d3fdb257b90ae5678077555c581886c092713f9fbcf3b8b9aa96",
+      "declared_ability_sound": "Hero_Magnataur.Skewer.Cast"
+    },
+    {
+      "hero": "mars",
+      "skill": "mars_gods_rebuke",
+      "events": [
+        "Hero_Mars.Shield"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_mars.txt",
+      "definition_sha256": "56f70cf9f7b6086ee1155d3868113b65ab310b1567326ff80c2aa36deaf89423",
+      "declared_ability_sound": "Hero_Mars.Shield.Cast"
+    },
+    {
+      "hero": "mars",
+      "skill": "mars_spear",
+      "events": [
+        "Hero_Mars.Spear"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_mars.txt",
+      "definition_sha256": "56f70cf9f7b6086ee1155d3868113b65ab310b1567326ff80c2aa36deaf89423",
+      "declared_ability_sound": "Hero_Mars.Spear.Cast"
+    },
+    {
+      "hero": "night_stalker",
+      "skill": "night_stalker_void",
+      "events": [
+        "Hero_Nightstalker.Void"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_night_stalker.txt",
+      "definition_sha256": "84d87307cbfa65fa2ad11da4de879bab64440197e9697afaa9f3ed8e3bc7e0b4",
+      "declared_ability_sound": "Hero_Nightstalker.Void",
+      "file_hero": "nightstalker"
+    },
+    {
+      "hero": "omniknight",
+      "skill": "omniknight_hammer_of_purity",
+      "events": [
+        "Hero_Omniknight.Repel"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_omniknight.txt",
+      "definition_sha256": "c8f030c542ace2c12940d6e7c768557f23be9962051569014db4009d4108ceab",
+      "declared_ability_sound": "Hero_Omniknight.Repel"
+    },
+    {
+      "hero": "omniknight",
+      "skill": "omniknight_purification",
+      "events": [
+        "Hero_Omniknight.Purification"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_omniknight.txt",
+      "definition_sha256": "c8f030c542ace2c12940d6e7c768557f23be9962051569014db4009d4108ceab",
+      "declared_ability_sound": "Hero_Omniknight.Purification"
+    },
+    {
+      "hero": "phoenix",
+      "skill": "phoenix_fire_spirits",
+      "events": [
+        "Hero_Phoenix.FireSpirits"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_phoenix.txt",
+      "definition_sha256": "543777021974e6f751f62484457fb9c9345fe9b3d9dd3cded762883af425fe8f",
+      "declared_ability_sound": "Hero_Phoenix.FireSpirits.Cast"
+    },
+    {
+      "hero": "phoenix",
+      "skill": "phoenix_icarus_dive",
+      "events": [
+        "Hero_Phoenix.IcarusDive"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_phoenix.txt",
+      "definition_sha256": "543777021974e6f751f62484457fb9c9345fe9b3d9dd3cded762883af425fe8f",
+      "declared_ability_sound": "Hero_Phoenix.IcarusDive.Cast"
+    },
+    {
+      "hero": "phoenix",
+      "skill": "phoenix_launch_fire_spirit",
+      "events": [
+        "Hero_Phoenix.FireSpirits.Launch"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_phoenix.txt",
+      "definition_sha256": "543777021974e6f751f62484457fb9c9345fe9b3d9dd3cded762883af425fe8f",
+      "declared_ability_sound": "Hero_Phoenix.FireSpirits.Launch"
+    },
+    {
+      "hero": "phoenix",
+      "skill": "phoenix_sun_ray",
+      "events": [
+        "Hero_Phoenix.SunRay"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_phoenix.txt",
+      "definition_sha256": "543777021974e6f751f62484457fb9c9345fe9b3d9dd3cded762883af425fe8f",
+      "declared_ability_sound": "Hero_Phoenix.SunRay.Cast"
+    },
+    {
+      "hero": "pudge",
+      "skill": "pudge_meat_hook",
+      "events": [
+        "Hero_Pudge.AttackHookExtend"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_pudge.txt",
+      "definition_sha256": "02699def2c099461c04e39030a0188d29e6bfc63224c695fe41144a3442801f5",
+      "declared_ability_sound": "Hero_Pudge.AttackHookExtend"
+    },
+    {
+      "hero": "rattletrap",
+      "skill": "rattletrap_power_cogs",
+      "events": [
+        "Hero_Rattletrap.Power_Cogs"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_rattletrap.txt",
+      "definition_sha256": "f02ec8cb68002dd8f95b8b01c16f70748148cce1e93f2e08459e2f1f3f4f1980",
+      "declared_ability_sound": "Hero_Rattletrap.Power_Cogs"
+    },
+    {
+      "hero": "rattletrap",
+      "skill": "rattletrap_rocket_flare",
+      "events": [
+        "Hero_Rattletrap.Rocket_Flare.Fire"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_rattletrap.txt",
+      "definition_sha256": "f02ec8cb68002dd8f95b8b01c16f70748148cce1e93f2e08459e2f1f3f4f1980",
+      "declared_ability_sound": "Hero_Rattletrap.Rocket_Flare.Fire"
+    },
+    {
+      "hero": "skeleton_king",
+      "skill": "skeleton_king_hellfire_blast",
+      "events": [
+        "Hero_SkeletonKing.Hellfire_Blast"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_skeleton_king.txt",
+      "definition_sha256": "dea472e68d3c6b427b7342a5798afa66a19b3be3a8272a9ee29c74071d4d409d",
+      "declared_ability_sound": "Hero_SkeletonKing.Hellfire_Blast",
+      "file_hero": "skeletonking"
+    },
+    {
+      "hero": "skeleton_king",
+      "skill": "skeleton_king_mortal_strike",
+      "events": [
+        "Hero_SkeletonKing.CriticalStrike"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_skeleton_king.txt",
+      "definition_sha256": "dea472e68d3c6b427b7342a5798afa66a19b3be3a8272a9ee29c74071d4d409d",
+      "declared_ability_sound": "Hero_SkeletonKing.CriticalStrike",
+      "file_hero": "skeletonking"
+    },
+    {
+      "hero": "spirit_breaker",
+      "skill": "spirit_breaker_charge_of_darkness",
+      "events": [
+        "Hero_Spirit_Breaker.ChargeOfDarkness"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_spirit_breaker.txt",
+      "definition_sha256": "5b906de593730ec8d1b906af62f6b916ea115a08e241fb32b76a3037d6db278e",
+      "declared_ability_sound": "Hero_Spirit_Breaker.ChargeOfDarkness"
+    },
+    {
+      "hero": "spirit_breaker",
+      "skill": "spirit_breaker_greater_bash",
+      "events": [
+        "Hero_Spirit_Breaker.GreaterBash"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_spirit_breaker.txt",
+      "definition_sha256": "5b906de593730ec8d1b906af62f6b916ea115a08e241fb32b76a3037d6db278e",
+      "declared_ability_sound": "Hero_Spirit_Breaker.GreaterBash"
+    },
+    {
+      "hero": "sven",
+      "skill": "sven_storm_bolt",
+      "events": [
+        "Hero_Sven.StormBoltImpact"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_sven.txt",
+      "definition_sha256": "2e82f619775e4b747282ec4150126e56dfbbf898687869c012c2c93c0dac527c",
+      "declared_ability_sound": "Hero_Sven.StormBoltImpact"
+    },
+    {
+      "hero": "sven",
+      "skill": "sven_warcry",
+      "events": [
+        "Hero_Sven.WarCry"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_sven.txt",
+      "definition_sha256": "2e82f619775e4b747282ec4150126e56dfbbf898687869c012c2c93c0dac527c",
+      "declared_ability_sound": "Hero_Sven.WarCry"
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_anchor_smash",
+      "events": [
+        "Hero_Tidehunter.AnchorSmash"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_tidehunter.txt",
+      "definition_sha256": "6f9cbbaabdd03bcdb954cbfea073482cd87bf25a73cb55fbcfbc5793e5ceae90",
+      "declared_ability_sound": "Hero_Tidehunter.AnchorSmash"
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_gush",
+      "events": [
+        "Ability.Gush"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_tidehunter.txt",
+      "definition_sha256": "6f9cbbaabdd03bcdb954cbfea073482cd87bf25a73cb55fbcfbc5793e5ceae90",
+      "declared_ability_sound": "Ability.GushCast"
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_kraken_shell",
+      "events": [
+        "Hero_Tidehunter.KrakenShell"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_tidehunter.txt",
+      "definition_sha256": "6f9cbbaabdd03bcdb954cbfea073482cd87bf25a73cb55fbcfbc5793e5ceae90",
+      "declared_ability_sound": "Hero_Tidehunter.KrakenShell"
+    },
+    {
+      "hero": "treant",
+      "skill": "treant_eyes_in_the_forest",
+      "events": [
+        "Hero_Treant.Eyes"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_treant.txt",
+      "definition_sha256": "7aad6c9552b3e5038f0857e8ab7775e7fb985cdf9e90b6e22554713b7d1efab5",
+      "declared_ability_sound": "Hero_Treant.Eyes.Cast"
+    },
+    {
+      "hero": "treant",
+      "skill": "treant_leech_seed",
+      "events": [
+        "Hero_Treant.LeechSeed"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_treant.txt",
+      "definition_sha256": "7aad6c9552b3e5038f0857e8ab7775e7fb985cdf9e90b6e22554713b7d1efab5",
+      "declared_ability_sound": "Hero_Treant.LeechSeed.Cast"
+    },
+    {
+      "hero": "treant",
+      "skill": "treant_living_armor",
+      "events": [
+        "Hero_Treant.LivingArmor"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_treant.txt",
+      "definition_sha256": "7aad6c9552b3e5038f0857e8ab7775e7fb985cdf9e90b6e22554713b7d1efab5",
+      "declared_ability_sound": "Hero_Treant.LivingArmor.Cast"
+    },
+    {
+      "hero": "undying",
+      "skill": "undying_decay",
+      "events": [
+        "Hero_Undying.Decay"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_undying.txt",
+      "definition_sha256": "d255f5796fc346b8ca694ca8acdff70d18bf617cc860c3601f1e2b2697610503",
+      "declared_ability_sound": "Hero_Undying.Decay.Cast"
+    },
+    {
+      "hero": "undying",
+      "skill": "undying_soul_rip",
+      "events": [
+        "Hero_Undying.SoulRip"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_undying.txt",
+      "definition_sha256": "d255f5796fc346b8ca694ca8acdff70d18bf617cc860c3601f1e2b2697610503",
+      "declared_ability_sound": "Hero_Undying.SoulRip.Cast"
+    },
+    {
+      "hero": "undying",
+      "skill": "undying_tombstone",
+      "events": [
+        "Hero_Undying.Tombstone"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_undying.txt",
+      "definition_sha256": "d255f5796fc346b8ca694ca8acdff70d18bf617cc860c3601f1e2b2697610503",
+      "declared_ability_sound": "Hero_Undying.Tombstone"
+    },
+    {
+      "hero": "zuus",
+      "skill": "zuus_arc_lightning",
+      "events": [
+        "Hero_Zuus.ArcLightning"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_zuus.txt",
+      "definition_sha256": "e1a5d9c91fa66a70c233912115244d4ec8c0e388b76770d54a81404c3733a15c",
+      "declared_ability_sound": "Hero_Zuus.ArcLightning.Cast"
+    },
+    {
+      "hero": "zuus",
+      "skill": "zuus_cloud",
+      "events": [
+        "Hero_Zuus.Cloud"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_zuus.txt",
+      "definition_sha256": "e1a5d9c91fa66a70c233912115244d4ec8c0e388b76770d54a81404c3733a15c",
+      "declared_ability_sound": "Hero_Zuus.Cloud.Cast"
+    },
+    {
+      "hero": "zuus",
+      "skill": "zuus_lightning_bolt",
+      "events": [
+        "Hero_Zuus.LightningBolt"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_zuus.txt",
+      "definition_sha256": "e1a5d9c91fa66a70c233912115244d4ec8c0e388b76770d54a81404c3733a15c",
+      "declared_ability_sound": "Hero_Zuus.LightningBolt"
+    },
+    {
+      "hero": "zuus",
+      "skill": "zuus_static_field",
+      "events": [
+        "Hero_Zuus.StaticField"
+      ],
+      "definition_resource": "scripts/npc/heroes/npc_dota_hero_zuus.txt",
+      "definition_sha256": "e1a5d9c91fa66a70c233912115244d4ec8c0e388b76770d54a81404c3733a15c",
+      "declared_ability_sound": "Hero_Zuus.StaticField"
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_dead_in_the_water",
+      "events": [
+        "Hero_Tidehunter.DeadInTheWater"
+      ],
+      "mapping_basis": "curated_current_hero_event_namespace"
+    },
+    {
+      "hero": "tidehunter",
+      "skill": "tidehunter_leviathans_catch",
+      "events": [
+        "Hero_Tidehunter.LeviathansCatch"
+      ],
+      "mapping_basis": "curated_current_hero_event_namespace"
+    }
+  ]
+}
