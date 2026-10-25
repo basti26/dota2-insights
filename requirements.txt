@@ -1,0 +1,5 @@
+# Desktop/offline image and audio analysis, observed on Python 3.12.
+# DEM parser dependencies are isolated in requirements-replay.txt.
+numpy==2.5.3
+opencv-python==5.0.0.93
+Pillow==12.3.0

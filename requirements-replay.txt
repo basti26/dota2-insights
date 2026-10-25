@@ -1,0 +1,18 @@
+# Optional offline replay environment, recorded on Windows / CPython 3.12.
+# Install only with --target .replay-deps; keep separate from the live assistant.
+# gem-dota is MIT licensed; source is pinned to the reviewed upstream commit.
+gem-dota @ git+https://github.com/whanyu1212/gem-dota.git@bae361de1d82e7a0a8457c788bf6f9d90e9c4d86
+numpy==2.5.4
+pandas==3.0.6
+protobuf==7.36.2
+protoc-wheel-0==30.2
+python-snappy==0.7.3
+rich==15.0.0
+zstandard==0.25.0
+python-dateutil==2.9.0.post0
+tzdata==2026.5
+cramjam==2.14.0
+markdown-it-py==4.2.0
+Pygments==2.21.0
+mdurl==0.1.2
+six==1.17.0

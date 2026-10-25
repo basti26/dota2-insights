@@ -1,0 +1,12 @@
+{
+  "crown": {
+    "id": 261,
+    "name": "Crown",
+    "cost": 450
+  },
+  "enchanted_mango": {
+    "id": 216,
+    "name": "Enchanted Mango",
+    "cost": 65
+  }
+}
