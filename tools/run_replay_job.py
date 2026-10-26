@@ -5,7 +5,9 @@ import sys
 
 ROOT = (Path(sys.executable).resolve().parents[2] if getattr(sys, 'frozen', False)
         else Path(__file__).resolve().parents[1])
-sys.path.insert(0, str(ROOT))
+if not getattr(sys, 'frozen', False):
+    # The frozen parser must use its own bundle, not the UI's public .py copies.
+    sys.path.insert(0, str(ROOT))
 
 
 def run(source, job):

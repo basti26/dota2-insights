@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "source_repository": "basti26/dota2-foresight",
+  "source_scope": "working_tree_bytes_not_head_or_runtime_loaded_code_proof",
+  "sources": [
+    {
+      "path": "project/dota2_economy/presentmon_review.py",
+      "sha256": "9c468513c11f6349ae8dc492d710684e4b7732afd0f0dada11ef27c98cacba0e",
+      "destination": "dota2_insights/presentmon_metrics.py",
+      "transformation": "byte-identical independent offline reader copy"
+    },
+    {
+      "path": "project/dota2_economy/presentmon_game_review.py",
+      "sha256": "c3f6d157c37ffb3d2f4ac27b246188dd0f14127cccd12dce82d9e455ebd7d887",
+      "destination": "dota2_insights/performance_review.py",
+      "transformation": "adapt QPC window and pinned capture checks; require explicit match identity and typed closed source verification"
+    },
+    {
+      "path": "project/dota2_economy/presentmon_context.py",
+      "sha256": "912c852852d5cf318f0ba9c319b58f338b2870467af9f5f2256b6fab42a1abb6",
+      "destination": "dota2_insights/performance_review.py",
+      "transformation": "adapt bounded configuration reference decoder only; no encoder or capture migration"
+    }
+  ],
+  "cross_repository_runtime_imports": false,
+  "historical_migration_manifest_modified": false
+}

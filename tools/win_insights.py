@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
@@ -23,7 +23,7 @@ def self_check():
             refused += 1
         else:
             raise ValueError('sealed_match_not_refused')
-    from dota2_insights import replay_fact_review, audio_listening_review, ward_review_batch
+    from dota2_insights import replay_fact_review
     roots = history_roots(ROOT / 'config/history.local.json')
     return {'passed': True, 'sealed_matches_refused': refused,
             'parser_dependency_status': dependency_status(ROOT),
@@ -35,7 +35,14 @@ def self_check():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--offline-self-check', type=Path)
+    parser.add_argument('--check-ui', action='store_true')
     args = parser.parse_args()
+    if args.offline_self_check:
+        from dota2_insights.portable_app import write_check
+        return write_check(args.offline_self_check, ROOT, check_ui=args.check_ui)
+    if args.check_ui:
+        parser.error('--check-ui requires --offline-self-check')
     if args.self_check:
         print(json.dumps(self_check(), ensure_ascii=False))
         return 0

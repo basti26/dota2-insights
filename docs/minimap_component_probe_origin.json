@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "source_repository": "basti26/dota2-foresight",
+  "source_file": "project/dota2_minimap/detector.py",
+  "source_version": "minimap_color_candidates_v1",
+  "source_worktree_sha256": "e014cfda595646aa8ee31ac8d1a905f4791272de25f7c17a89ca046daee4be51",
+  "source_scope": "working_tree_bytes_not_head_or_runtime_loaded_code_proof",
+  "adapted_file": "dota2_insights/minimap_component_probe.py",
+  "adapted_source_sha256": "a5551e280e907f6bb8090ee6930fa56c72569f70d24cd56bb403cf09931a07c7",
+  "transformations": [
+    "retain baseline HSV bands, contour geometry, sorting and 48-candidate cap",
+    "separate offline input validation and pure baseline function",
+    "add horizontal color-band and solid-square overlap flags without suppression"
+  ],
+  "cross_repository_runtime_imports": false,
+  "historical_migration_manifest_modified": false,
+  "parity_evidence": "diagnostics/minimap-component-parity-20261026/verification.json",
+  "parity_scope": "24 saved PNG inputs; core baseline fields identical; not ground truth or accuracy"
+}

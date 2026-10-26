@@ -27,11 +27,20 @@ def main():
         cli.error(f'Use a new output directory and a wall limit of 1..{limit} seconds.')
     sys.path.insert(0, str(ROOT / '.replay-deps'))
     sys.path.insert(0, str(ROOT))
+    from dota2_insights.minimap.offline_io import check_input_paths
+    from dota2_insights.replay_holdout import refuse_locked_match
+    check_input_paths(args.source,args.output)
     from dota2_insights.replay_archive import (
         GEM_VERSION, GEM_COMMIT, _footer_match_id, _windows_dota_running, sha256_file,
     )
     if importlib.metadata.version('gem-dota') != GEM_VERSION:
         cli.error('Unexpected parser version.')
+    source = args.source.resolve(strict=True)
+    source_stat = source.stat()
+    mid = _footer_match_id(source)
+    if not mid:
+        cli.error('Missing independent replay match identity.')
+    refuse_locked_match(mid)
     if sys.platform == 'win32' and _windows_dota_running():
         cli.error('Dota is running; offline parse refused.')
     priority = False
@@ -49,11 +58,6 @@ def main():
     from gem.extractors.wards import WardsExtractor
     import gem.extractors.wards as wards_module
     import gem.parser as parser_module
-    source = args.source.resolve(strict=True)
-    source_stat = source.stat()
-    mid = _footer_match_id(source)
-    if not mid:
-        cli.error('Missing independent replay match identity.')
     source_sha = sha256_file(source)
     args.output.mkdir(parents=True)
     parser = ReplayParser(source)

@@ -115,12 +115,8 @@ class Bridge:
         """Install only this user's files and an additive crontab boot entry."""
         import base64
         if self.config.get('managed_on_pi'):
-            files={'library.py':ROOT/'dota2_insights'/'replay_library_store.py',
-                   'pi_ward_worker.py':ROOT/'tools'/'pi_ward_worker.py',
-                   'extract_replay_wards.py':ROOT/'tools'/'extract_replay_wards.py',
-                   'dota2_insights/replay_archive.py':ROOT/'dota2_insights'/'replay_archive.py',
-                   'dota2_insights/replay_postgame_context.py':ROOT/'dota2_insights'/'replay_postgame_context.py'}
-            payload={name:base64.b64encode(path.read_bytes()).decode() for name,path in files.items()}
+            from .pi_deployment import deployment_sources
+            payload={name:base64.b64encode(raw).decode() for name,raw in deployment_sources(ROOT).items()}
             code="""from pathlib import Path
 import base64,json,subprocess
 root=Path('/opt/dota2-replay')

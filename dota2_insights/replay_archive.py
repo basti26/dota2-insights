@@ -42,6 +42,8 @@ def packaged_source(path: Path) -> Path:
 
 def _footer_match_id(source: Path) -> str | None:
     """Read only the small indexed DEM_FileInfo packet for independent identity."""
+    from .minimap.offline_io import check_input_paths
+    check_input_paths(source)
     import struct
     import sys
     if getattr(sys, 'frozen', False):
@@ -159,6 +161,9 @@ def parse_archive(source: Path, output: Path, options: ArchiveOptions) -> dict[s
     Existing output directories are refused so two runs cannot mix evidence.
     """
     options.validate()
+    from .minimap.offline_io import check_input_paths
+    from .replay_holdout import refuse_locked_match
+    check_input_paths(source,output)
     import sys
     if sys.platform == "win32":
         if _windows_dota_running():
@@ -178,6 +183,10 @@ def parse_archive(source: Path, output: Path, options: ArchiveOptions) -> dict[s
         raise ValueError("output directory already exists; choose a new directory")
     if importlib.metadata.version("gem-dota") != GEM_VERSION:
         raise ValueError(f"this adapter requires gem-dota {GEM_VERSION}")
+    match_id = _footer_match_id(source)
+    if not match_id:
+        raise ValueError("replay footer does not independently identify the match")
+    refuse_locked_match(match_id)
     from gem.catalog.heroes import HEROES
     from gem.catalog.items import ITEMS
     from gem.extractors._snapshots import _pos, scan_player_resource
@@ -194,9 +203,6 @@ def parse_archive(source: Path, output: Path, options: ArchiveOptions) -> dict[s
     with source.open("rb") as stream:
         if stream.read(8) != b"PBDEMS2\0":
             raise ValueError("source does not have Source 2 replay magic")
-    match_id = _footer_match_id(source)
-    if not match_id:
-        raise ValueError("replay footer does not independently identify the match")
     output.mkdir(parents=True)
     started = time.monotonic()
     parser = ReplayParser(source)

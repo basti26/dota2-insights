@@ -20,3 +20,5 @@ runtime/
 # Historical notes are retained locally, not republished as current guidance.
 /docs/legacy/*
 !/docs/legacy/README.md
+
+.parser-source/
