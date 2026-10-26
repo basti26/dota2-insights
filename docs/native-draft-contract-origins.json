@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "adapted_at": "2026-10-26",
+  "files": [
+    {
+      "source_repository": "dota2-foresight",
+      "source_relative_path": "project/dota2_economy/draft_cache.py",
+      "source_sha256": "9d8a1dd892baa9b2cf339b56c761a877e7d7d7b711ea54ff60d862851cc5921e",
+      "destination": "dota2_insights/contracts/native_statistics.py",
+      "scope": "pure native JSON validation only; adapted imports; not byte-identical"
+    },
+    {
+      "source_repository": "dota2-foresight",
+      "source_relative_path": "project/dota2_economy/draft_capabilities.py",
+      "source_sha256": "90ed4a763e3b07b5d2305a6140e925e83af6ef742be5636482e7e9df50da289c",
+      "destination": "dota2_insights/contracts/native_rules.py",
+      "scope": "pure native JSON validation only; adapted imports; not byte-identical"
+    },
+    {
+      "source_repository": "dota2-foresight",
+      "source_relative_path": "project/dota2_economy/draft_state.py",
+      "source_sha256": "01ecf68e2643e27a26c72257a34071945ea0ccfc018f00d8d3e4a6e5a87d1ec3",
+      "destination": "dota2_insights/contracts/common.py",
+      "scope": "hero ID predicate adapted; UTC parsing uses insights UTC helper"
+    }
+  ]
+}

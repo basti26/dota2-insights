@@ -2,14 +2,13 @@
 import hashlib
 import json
 from pathlib import Path
-import sys
 
 
 def refuse_locked_match(match_id, root=None):
     root = Path(root) if root is not None else Path(__file__).resolve().parents[1]
     public = root / 'data/validation-locks.json'
-    if getattr(sys, 'frozen', False) and not public.is_file():
-        raise ValueError('独立核验锁定清单缺失，请重新解压完整程序')
+    if not public.is_file():
+        raise ValueError('独立核验锁定清单缺失，请恢复完整项目或程序文件')
     if public.exists():
         with public.open('rb') as stream:
             raw = stream.read(16385)

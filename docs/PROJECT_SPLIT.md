@@ -2,7 +2,7 @@
 
 2026-10-25。按用户要求独立到 basti26/dota2-insights。迁移的是已存在的实现，不以拆仓宣称地图、音效或BP准确性通过。
 
-|职责|dota2-helper|dota2-insights|
+|职责|dota2-foresight（原dota2-helper）|dota2-insights|
 |---|---|---|
 |游戏过程中|GSI、经济/BP、覆盖层、提醒、采样记录|不随助手启动|
 |录像输入|暂留本人登录与轻量下载、记录比赛编号|本地录像队列、固定Gem解析、事实分期|
