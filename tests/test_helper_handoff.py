@@ -46,6 +46,18 @@ class HandoffTests(unittest.TestCase):
     def inspect(self):
         return handoff.inspect_registry('helper_history', self.history, self.registry, quiet_seconds=0)
 
+    def test_first_context_bound_row_checks_holdout_without_top_level_match(self):
+        self.journal.write_text(json.dumps({"game_context_binding": {
+            "context": {"match_id": "12345"}}}) + "\n", encoding="utf-8")
+        reader = handoff.Inputs("helper_history", self.history, quiet_seconds=0)
+        with patch("dota2_insights.replay_holdout.refuse_locked_match") as guard:
+            reader.read(self.journal, mode="jsonl")
+        guard.assert_any_call("12345")
+        reader = handoff.Inputs("helper_history", self.history, quiet_seconds=0)
+        with patch("dota2_insights.replay_holdout.refuse_locked_match", side_effect=ValueError("sealed")):
+            with self.assertRaisesRegex(ValueError, "sealed"):
+                reader.read(self.journal, mode="jsonl")
+
     def test_closed_drained_sources_index_without_copying_payloads(self):
         result = self.inspect()
         self.assertEqual(result['state'], 'ready')

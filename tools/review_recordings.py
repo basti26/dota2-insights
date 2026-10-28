@@ -15,6 +15,8 @@ def run(root=ROOT, *, roots=None, latest=5):
     from dota2_insights.observation_index import sync as sync_equipment
     from dota2_insights.draft_phase_index import sync as sync_bp
     from dota2_insights.minimap_index import sync as sync_minimap
+    from dota2_insights.audio_match_index import sync as sync_audio
+    from dota2_insights.performance_index import sync as sync_performance
     from tools.review_closed_record_content import generate
     root = Path(root).resolve()
     roots = roots if roots is not None else history_roots(root/'config/history.local.json')
@@ -23,13 +25,19 @@ def run(root=ROOT, *, roots=None, latest=5):
     equipment = sync_equipment(root, roots, latest=latest)
     bp = sync_bp(root, roots, latest=latest)
     minimap = sync_minimap(root, roots, latest=latest)
+    audio = sync_audio(root, roots, latest=latest)
+    performance = sync_performance(root, roots, latest=latest)
     return {**generate(root, roots=roots), 'legacy_counts': legacy['counts'],
             'native_duplicate_packages_omitted': native['duplicate_packages_omitted'],
             'equipment_duplicate_packages_omitted':equipment['duplicate_packages_omitted'],
             'bp_duplicate_packages_omitted':bp['duplicate_packages_omitted'],
             'bp_conflicting_binding_packages':bp['conflicting_binding_packages'],
             'minimap_duplicate_packages_omitted':minimap['duplicate_packages_omitted'],
-            'minimap_conflicting_run_packages':minimap['conflicting_run_packages']}
+            'minimap_conflicting_run_packages':minimap['conflicting_run_packages'],
+            'audio_match_duplicate_packages_omitted':audio['duplicate_packages_omitted'],
+            'audio_match_conflicting_scope_packages':audio['conflicting_scope_packages'],
+            'performance_match_duplicate_packages_omitted':performance['duplicate_packages_omitted'],
+            'performance_match_conflicting_capture_packages':performance['conflicting_capture_packages']}
 
 
 def main():

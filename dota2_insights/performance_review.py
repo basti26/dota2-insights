@@ -84,6 +84,8 @@ def _source(root, ref):
 def review(package, roots):
     results, unavailable = [], []
     with ClosedJournals(package, roots) as reader:
+        if not any(c['kind'] == 'fps' for c in package['components']):
+            unavailable.append({'reason': 'fps_not_recorded'})
         for component in package['components']:
             if component['kind'] != 'fps':
                 continue
@@ -149,8 +151,8 @@ def review(package, roots):
             'source_verified_before_and_after':True}
 
 
-def render_markdown(reports):
-    lines = ['# 对局性能复核', '', '只使用明确比赛/会话及原生QPC对局前台窗口；提交帧与显示帧分别统计，不合并不同swapchain。',
+def render_markdown(reports, *, title='对局性能复核'):
+    lines = ['# '+title, '', '只使用明确比赛/会话及原生QPC对局前台窗口；提交帧与显示帧分别统计，不合并不同swapchain。',
         '不是助手开/关因果实验，不把GPU毫秒当利用率，不把采样窗口当全局覆盖。', '',
         '| 比赛 | 状态 | 覆盖秒 | 流 | 提交FPS | 显示FPS | 显示1% low | 显示P99毫秒 | 显示>100ms间隔 |',
         '|---|---|---:|---|---:|---:|---:|---:|---:|']
@@ -165,4 +167,6 @@ def render_markdown(reports):
                 lines.append(f"| {game['match_id']} | {game['status']} | {game['covered_game_seconds']:.1f} | {label} | "
                     f"{value(submitted,'average_fps')} | {value(shown,'average_fps')} | {value(shown,'one_percent_low_fps')} | "
                     f"{value(shown,'p99_frame_ms')} | {value(shown,'intervals_over_100_ms')} |")
+        for item in report['unavailable']:
+            lines.append(f"\n{report['launcher_run_id']}：{item['reason']}（未验证，不按零FPS处理）。")
     return '\n'.join(lines) + '\n'

@@ -36,8 +36,8 @@ def _registry_base(root_key, relative):
     if root_key == 'helper_history' and not prefix:
         return PurePosixPath('.')
     if (root_key == 'helper_releases' and len(prefix) == 3
-            and prefix[0].startswith(('helper-', 'economy-'))
-            and prefix[1] in ('Dota2Helper', 'Dota2Economy') and prefix[2] == 'diagnostics'):
+            and prefix[0].startswith(('foresight-', 'helper-', 'economy-'))
+            and prefix[1] in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') and prefix[2] == 'diagnostics'):
         return PurePosixPath(*prefix)
     raise ValueError('handoff_registry_layout_invalid')
 
@@ -114,6 +114,7 @@ class Inputs:
     def read(self, value, *, mode='json', declared_match=None, expected_run_id=None):
         path = self.path(value)
         from .minimap.offline_io import check_input_paths
+        from .replay_holdout import refuse_locked_match
         check_input_paths(path)
         key = str(path)
         cache_key = (key, mode, declared_match, expected_run_id)
@@ -135,6 +136,9 @@ class Inputs:
                     raise ValueError('handoff_source_size_limit')
                 digest.update(raw)
                 result = _json(raw)
+                if 'frame_context_relay' in result:
+                    from .minimap_game_context import summary
+                    summary(result['frame_context_relay'])
             else:
                 matches, ended = Counter(), set()
                 consumed = 0
@@ -150,6 +154,11 @@ class Inputs:
                         if not raw.endswith(b'\n'):
                             raise ValueError('handoff_journal_partial_line')
                         row = _json(raw)
+                        binding = row.get('game_context_binding')
+                        if isinstance(binding, dict) and isinstance(binding.get('context'), dict):
+                            declared = binding['context'].get('match_id')
+                            if declared is not None:
+                                refuse_locked_match(declared)
                         snapshot = row.get('snapshot')
                         snapshot = snapshot if isinstance(snapshot, dict) else {}
                         mid = match_id(row.get('match_id', snapshot.get('match_id')))
@@ -164,7 +173,6 @@ class Inputs:
                                     or row.get('record_session_id') not in (None, association['record_session_id'])):
                                 raise ValueError('handoff_journal_game_session_conflict')
                         if mid is not None:
-                            from .replay_holdout import refuse_locked_match
                             refuse_locked_match(mid)
                             if declared_match and mid != declared_match:
                                 raise ValueError('handoff_journal_match_conflict')
@@ -522,11 +530,11 @@ def discover(roots, *, latest=5):
             raise ValueError('handoff_history_root_unavailable')
         bases = [root] if key == 'helper_history' else []
         if key == 'helper_releases' and root.is_dir():
-            releases = sorted((p for p in root.iterdir() if p.is_dir() and p.name.startswith(('helper-', 'economy-'))), reverse=True)
+            releases = sorted((p for p in root.iterdir() if p.is_dir() and p.name.startswith(('foresight-', 'helper-', 'economy-'))), reverse=True)
             if len(releases) > 100:
                 raise ValueError('handoff_release_directory_limit')
             for release in releases:
-                bases.extend(release / app / 'diagnostics' for app in ('Dota2Helper', 'Dota2Economy'))
+                bases.extend(release / app / 'diagnostics' for app in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy'))
         for base in bases:
             directory = base / 'field-recording'
             if not directory.is_dir():

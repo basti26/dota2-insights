@@ -1,5 +1,15 @@
 # 日常记录一条命令复盘
 
+逐局录音已接入自动索引及联合报告，见PER_MATCH_AUDIO_HANDOFF_V1.md。audio-match-handoff索引独立保存清单SHA，读取时复验元数据及原WAV；无需整个录音run停止。旧整次录音与新逐局计数分开，按明确capture运行ID/文件名/已核验SHA标记重合。缺索引/未闭合/来源冲突不作零音频；日常报告已追加四身份精确来源核查和共享技能字段比较摘要。新格式盲测另由显式分析CLI按先冻结预测/后读旁证执行，不在日常命令中自动启动分类器。
+
+性能新格式已接入本日常自动链，见PER_MATCH_PERFORMANCE_HANDOFF_V1.md：采集器关闭后封存，performance-match-handoff独立索引保存清单SHA及有界来源成本，报告重验来源与身份。旧performance_reports仍要求闭合启动器来源；新performance_match_reports可在其他观察继续运行时消费，新旧计数分开，按明确采集/比赛/双会话及CSV/context SHA标记跨路径重合，不能累计同份记录。真实ETW开销及整局覆盖仍待验收。
+
+原生本人GSI新增实际字段证据：位置、状态布尔/未知、昼夜、公共目标提及与带时间事件键，见GSI_RECEIVED_EVIDENCE.md。坐标CSV由tools/review_gsi_evidence.py独立导出，含存活和来源年龄，不把死亡坐标混入存活标记证据；原生与旧通道重合数据仍不可累计。
+
+来源唯一性也纳入同一份GSI证据：重复provider时间不作唯一记录标识。未来带gsi_source_id的小地图自动按明确四身份配对并在联合报告给出覆盖/缺口摘要；详细坐标可用tools/prepare_minimap_gsi_alignment.py另行导出，见MINIMAP_GSI_SOURCE_ALIGNMENT.md。缺失ID的旧资料不按时间回填，也不把配对当作像素标定。
+
+新增：同一入口附带闭合PresentMon的明确比赛/QPC性能表、逐段WAV技术完整性表、BP冲突槽位与完整视图→界面应用链路。缺录音、未闭合、无合格帧窗口或缺UI回执保持不可用/未知，不冒充零值。音频实际核对SHA/格式/长度，验证后才写最终报告。见AUDIO_INTEGRITY_REVIEW.md、PERFORMANCE_REVIEW.md、BP_DIAGNOSTICS.md。
+
 2026-10-26。源码目录运行：
 
 ```powershell
@@ -23,7 +33,7 @@ python tools/review_recordings.py --latest 3
 
 多个source/release目录内若发现相同manifest SHA，只保留一个原生包，记录duplicate_packages_omitted。原生包与已闭合启动器包可能来自同一条主日志，此时按根/主日志相对路径/比赛/game_session_id/record_session_id标记also_in_closed_launcher_scope=true，报告明确不可相加；不将两份重复的GSI行汇总成更多独立样本。
 
-两种原生清单分别封存本人GSI与已提交装备观测。BP另以结束阶段前缀及独立迟到比赛绑定接收，见docs/DRAFT_PHASE_PREFIX_V1.md；它不是整局BP闭合。小地图独立run已接入自动索引/报告，见docs/CLOSED_MINIMAP_RUN_V1.md，但比赛归属仍未知；音频、性能仍需原通道闭合或后续逐局边界。不同格式的成功不互相代替。仅文件契约、同包算术和来源验证通过，不能声明实时识别准确率、真实全净资产或地图独立验证通过。
+两种原生清单分别封存本人GSI与已提交装备观测。BP另以结束阶段前缀及独立迟到比赛绑定接收，见docs/DRAFT_PHASE_PREFIX_V1.md；它不是整局BP闭合。小地图独立run已接入自动索引/报告，见docs/CLOSED_MINIMAP_RUN_V1.md，基础run比赛归属仍未知；可选帧来源扩展按docs/MINIMAP_FRAME_CONTEXT_V1.md以公开比赛号及双会话完全一致关联原生GSI，空编号不回填，不认证像素身份。音频现支持独立逐局封存，旧整次录音仍需原通道闭合；性能仍需整个PresentMon采集器关闭，不能仅凭CSV前缀认定最终退出码及ETW丢失状态。不同格式的成功不互相代替。仅文件契约、同包算术和来源验证通过，不能声明实时识别准确率、真实全净资产或地图独立验证通过。
 
 分别执行也仍支持：先tools/sync_helper_records.py，再tools/review_closed_record_content.py。直接读取单个逐局包继续用tools/review_match_journals.py；其核心审计逻辑已移到dota2_insights.match_journal_review，CLI只是入口，不由核心库导入工具程序。
 

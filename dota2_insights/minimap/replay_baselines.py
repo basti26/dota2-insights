@@ -12,6 +12,7 @@ import math
 from pathlib import Path
 import re
 import time
+from .offline_io import check_input_paths, check_match_metadata, checked_match
 
 SCHEMA_VERSION = 1
 MAX_SOURCE_BYTES = 512 * 1024 ** 2
@@ -52,6 +53,7 @@ def _canonical(value):
 
 def _read_object(path, limit=16 * 1024 ** 2):
     path = Path(path)
+    check_input_paths(path)
     with path.open("rb") as handle:
         content = handle.read(limit + 1)
     if len(content) > limit:
@@ -59,6 +61,7 @@ def _read_object(path, limit=16 * 1024 ** 2):
     value = json.loads(content)
     if not isinstance(value, dict):
         raise ValueError("baseline_object_required")
+    check_match_metadata(value)
     return value, {"file_name": path.name, "bytes": len(content),
                    "sha256": hashlib.sha256(content).hexdigest()}
 
@@ -101,6 +104,7 @@ def _visible_source(directory, candidates, guard):
     """Drop hidden positions before constructing any feature/target store."""
     directory = Path(directory)
     manifest, manifest_source = _read_object(directory / "manifest.json", 1024 ** 2)
+    checked_match(manifest.get('match_id'))
     expected = _mapping(_mapping(manifest.get('files', {})).get('hero_samples.jsonl', {}))
     candidate_source = _mapping(_mapping(candidates.get('sources', {})).get('hero_samples', {}))
     if (manifest.get("kind") != "offline_replay_archive"
@@ -201,6 +205,11 @@ def _endpoint(point, visible_index):
 
 
 def evaluate_case(directory, candidate_path, speeds, guard):
+    check_input_paths(directory, candidate_path)
+    # Candidate windows contain future target coordinates: authorize the
+    # archive's declared identity before opening those derived bodies too.
+    header, _ = _read_object(Path(directory)/'manifest.json', 1024**2)
+    checked_match(header.get('match_id'))
     candidates, candidate_source = _read_object(candidate_path)
     if (candidates.get("kind") != "offline_replay_raw_visibility_candidates"
             or candidates.get("schema_version") != 1 or candidates.get("training_ready") is not False

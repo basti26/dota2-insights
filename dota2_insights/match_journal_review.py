@@ -1,13 +1,16 @@
 """Review admitted native GSI journals with identity and source rechecks."""
 from .match_journals import open_rows
 from .self_economy_audit import SelfEconomyAudit
+from .gsi_evidence_census import GsiEvidenceCensus
 
 
 def review(folder, *, expected_package_id=None):
     audit = SelfEconomyAudit()
+    census = GsiEvidenceCensus()
     with open_rows(folder, expected_package_id=expected_package_id) as (manifest, rows):
-        for row in rows:
+        for line, row in enumerate(rows, 1):
             audit.add(row, {'sequence': row['sequence']})
+            census.add(row, line=line)
     result = audit.result()
     return {'match_id': manifest['match_id'], 'game_session_id': manifest['game_session_id'],
             'record_session_id': manifest['record_session_id'], 'run_id': manifest['run_id'],
@@ -15,7 +18,8 @@ def review(folder, *, expected_package_id=None):
             'rows_by_economy_status': result['rows_by_economy_status'], 'hero_rows': result['hero_rows'],
             'last_reported_gsi': result['last_reported_gsi'], 'self_economy_audit': result,
             'other_channels': 'not_closed_by_this_manifest',
-            'scope': manifest['scope'], 'accuracy_verified': False, 'source_verified_before_and_after': True}
+            'scope': manifest['scope'], 'gsi_evidence_census': census.result(),
+            'accuracy_verified': False, 'source_verified_before_and_after': True}
 
 
 def render_markdown(reports, skipped, *, index_state):

@@ -35,7 +35,9 @@ def _spec(spec, name, limit, *, rows=False):
         raise ValueError('minimap_source_spec_invalid')
 
 
-def _rows(path, spec, run):
+def _rows(path, spec, run, frame_summary=None):
+    from .minimap_game_context import binding
+    last_context_sequence, last_context_signature = 0, None
     digest, count, size = hashlib.sha256(), 0, 0
     with path.open('rb') as stream:
         before = path.stat()
@@ -53,6 +55,15 @@ def _rows(path, spec, run):
                 raise ValueError('minimap_unbound_contract_has_match_identity')
             if row.get('run_id') is not None and row['run_id'] != run:
                 raise ValueError('minimap_source_run_conflict')
+            context = binding(row, frame_summary)
+            if context is not None and context['status'] == 'explicit_last_context':
+                import json
+                signature = (context['sent_monotonic_ns'], json.dumps(context['context'], sort_keys=True))
+                if (last_context_signature is not None and signature[0] < last_context_signature[0]
+                        or context['sequence'] < last_context_sequence or context['sequence'] == last_context_sequence
+                        and signature != last_context_signature):
+                    raise ValueError('minimap_frame_context_reordered_or_redefined')
+                last_context_sequence, last_context_signature = context['sequence'], signature
             yield count, row, hashlib.sha256(line).hexdigest()
         after = path.stat()
     if ((before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino)
@@ -73,6 +84,8 @@ def verify(root, run, *, expected_package_id=None):
     if doc.get('match_id') is not None:
         refuse_locked_match(doc['match_id'])
         raise ValueError('minimap_handoff_cannot_claim_match')
+    from .minimap_game_context import summary as context_summary
+    frame_summary = context_summary(doc.get('frame_context_relay'))
     if _read(_path(root, run, 'record-handoff.COMPLETE'), 66).strip() != package_id.encode():
         raise ValueError('minimap_handoff_not_complete')
     if (type(doc.get('schema_version')) is not int or doc['schema_version'] != 1
@@ -90,6 +103,8 @@ def verify(root, run, *, expected_package_id=None):
     if len(session_raw) != doc['session']['bytes'] or hashlib.sha256(session_raw).hexdigest() != doc['session']['sha256']:
         raise ValueError('minimap_session_source_changed')
     session = _json(session_raw)
+    if session.get('frame_context_relay') != frame_summary:
+        raise ValueError('minimap_frame_context_summary_changed')
     if session.get('match_id') is not None:
         refuse_locked_match(session['match_id'])
         raise ValueError('minimap_session_cannot_claim_match')
@@ -124,7 +139,7 @@ def verify(root, run, *, expected_package_id=None):
             raise ValueError('minimap_missing_stream_appeared')
     samples = 0
     for spec in specs:
-        for _, row, _ in _rows(_path(root, run, spec['file']), spec, run):
+        for _, row, _ in _rows(_path(root, run, spec['file']), spec, run, frame_summary):
             if spec['file'] == 'samples.jsonl' and row.get('kind') == 'sample':
                 samples += 1
                 if type(row.get('sequence')) is not int or row['sequence'] != samples:
@@ -144,7 +159,7 @@ def open_rows(root, run, *, expected_package_id=None):
         for spec in doc['streams']:
             if not active:
                 raise ValueError('minimap_reader_closed')
-            cursor = _rows(_path(root, run, spec['file']), spec, run)
+            cursor = _rows(_path(root, run, spec['file']), spec, run, doc.get('frame_context_relay'))
             cursors.append(cursor)
             try:
                 while True:
@@ -168,7 +183,7 @@ def open_rows(root, run, *, expected_package_id=None):
 
 def review(root, run, *, expected_package_id=None):
     from collections import Counter
-    counts, outcomes = Counter(), Counter()
+    counts, outcomes, bindings, scopes = Counter(), Counter(), Counter(), Counter()
     first = last = None
     samples = 0
     with open_rows(root, run, expected_package_id=expected_package_id) as (doc, session, rows):
@@ -180,6 +195,11 @@ def review(root, run, *, expected_package_id=None):
                 first = observed if first is None else first
                 last = observed
                 samples += 1
+                binding = row.get('game_context_binding')
+                bindings[binding['status'] if binding is not None else 'unconfigured'] += 1
+                if binding is not None and binding['status'] == 'explicit_last_context':
+                    c = binding['context']
+                    scopes[(c['match_id'], c['game_session_id'], c['record_session_id'])] += 1
             if name == 'capture_attempts.jsonl' and isinstance(row.get('outcome'), str):
                 outcomes[row['outcome']] += 1
     return {'run_id': run, 'chain_id': doc['chain_id'], 'match_id': None,
@@ -188,7 +208,11 @@ def review(root, run, *, expected_package_id=None):
         'sample_rows': samples, 'first_sample_at_utc': first, 'last_sample_at_utc': last,
         'attempt_outcomes': dict(outcomes), 'source_evidence_complete': session.get('evidence_complete'),
         'images_verified': False, 'identity_verified': False, 'whole_match_coverage_verified': False,
-        'match_association': 'unknown_no_time_inference', 'source_verified_before_and_after': True}
+        'match_association': 'unknown_no_time_inference', 'source_verified_before_and_after': True,
+        'frame_context_counts': dict(bindings),
+        'explicit_context_scopes': [{'match_id': mid, 'game_session_id': gid, 'record_session_id': sid,
+                                     'sample_rows': n, 'pixel_identity_verified': False}
+                                    for (mid,gid,sid),n in sorted(scopes.items(), key=lambda item: (item[0][0] or '', *item[0][1:]))]}
 
 
 def render_markdown(reports, skipped, *, index_state):
@@ -204,9 +228,20 @@ def render_markdown(reports, skipped, *, index_state):
             f"原记录开始/结束UTC：{report['started_at_utc']} / {report['ended_at_utc']}；关闭原因：{report['close_reason']}",
             f"样本行：{report['sample_rows']}；原采集UTC首/末：{first} / {last}",
             f"各流行数：{report['stream_rows']}；采集尝试结果：{report['attempt_outcomes']}",
+            f"帧来源上下文：{report.get('frame_context_counts', {})}；只描述采样前最近明确GSI来源，不认证像素身份。",
             f"缺失流：{report['missing_at_close']}；源附加记录完整性：{evidence if evidence is not None else '未知'}",
             f"与闭合启动器重合流（不可重复累计）：{report['streams_also_in_closed_launcher_scope']}",
             '只核验记录文件，未核验PNG、英雄身份、地图坐标或预警准确性。', '']
+        for scope in report.get('explicit_context_scopes', []):
+            lines.append(f"- 明确来源会话：比赛{scope['match_id'] or '未知（仅本地会话）'} / {scope['game_session_id']} / {scope['record_session_id']}；"
+                         f"样本{scope['sample_rows']}；已封存本人GSI包：{scope.get('linked_native_gsi_packages', [])}。")
+        alignment = report.get('gsi_source_alignment')
+        if alignment is not None:
+            lines += ['', f"精确来源配对：{alignment['exact_source_record_rows']}/{alignment['sample_rows']}条；"
+                f"其中存活、新鲜且非暂停的位置证据{alignment['usable_position_rows']}条。",
+                f"来源ID已记录：{alignment['frame_source_id_rows']}条；未配对原因：{alignment['unmatched_reasons']}；"
+                f"原生GSI索引：{alignment['native_source_index_state']}。",
+                '以上为来源覆盖，不是识别准确率；像素身份和坐标映射仍未认证。', '']
     for row in skipped:
         lines.append(f"- 未分析：{row.get('state', 'unknown')} / {row.get('reason', '未通过交接')}")
     return '\n'.join(lines) + '\n'

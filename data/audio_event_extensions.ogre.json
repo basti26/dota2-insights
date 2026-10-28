@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "note": "Curated installed event namespaces, not recorded-game labels or proven audible casts. Smash remains unmapped; do not substitute FireShield.",
+  "skills": [
+    {"hero": "ogre_magi", "skill": "ogre_magi_fireblast", "events": ["Hero_OgreMagi.Fireblast.Cast", "Hero_OgreMagi.Fireblast.Target"]},
+    {"hero": "ogre_magi", "skill": "ogre_magi_ignite", "events": ["Hero_OgreMagi.Ignite.Cast", "Hero_OgreMagi.Ignite.Target", "Hero_OgreMagi.Ignite.Damage"]},
+    {"hero": "ogre_magi", "skill": "ogre_magi_bloodlust", "events": ["Hero_OgreMagi.Bloodlust.Cast", "Hero_OgreMagi.Bloodlust.Target"]}
+  ],
+  "unmapped_received_skills": ["ogre_magi_smash"]
+}

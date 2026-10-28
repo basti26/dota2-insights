@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "purpose": "offline_builder_migration_not_activation",
+  "source_repository": "basti26/dota2-foresight",
+  "source_is_worktree_not_head": true,
+  "files": [
+    {
+      "source": "dota2_economy\\official_portrait_pack.py",
+      "sha256": "a9118d83971bcd1612daa007380192f93bd0e357e2b3935f2c3e369b60abfb3c"
+    },
+    {
+      "source": "tools\\build_official_ability_sound_bank.py",
+      "sha256": "b2215c19a7c2b66dc95c4543284731710bc14be695a34d9d2df082479817eb9c"
+    }
+  ],
+  "destinations": [
+    "dota2_insights/valve_resources.py",
+    "tools/build_official_ability_sound_bank.py"
+  ],
+  "transformations": [
+    "copy only VPK dataclass and two bounded resource functions; add bounded directory reader",
+    "replace own-package imports; no live-helper path import",
+    "remove activation API/flags, require explicit mapping, enforce Insights-owned diagnostics output",
+    "retain existing event-stage/transient selection and feature algorithms"
+  ]
+}
