@@ -32,21 +32,58 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--waveform-check', action='store_true')
     parser.add_argument('--engine', choices=('baseline','mixture'), default='baseline')
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--handoff-package', type=Path,
+                        help='SHA-named closed package produced by sync_helper_records.py')
+    source.add_argument('--audio-match-package', type=Path,
+                        help='Writer-closed native scope directory; whole capture may continue')
+    parser.add_argument('--expected-package-id', help='Pin native manifest SHA from the audio-match-handoff index')
     args = parser.parse_args()
+    from dota2_insights.history import history_roots, checked_input, checked_output
+    from dota2_insights.closed_journals import read_package
+    from dota2_insights.closed_audio_analysis import (open_analysis_inputs, open_match_analysis_inputs,
+                                                     bank_fingerprint, seal_receipt)
+    bank = checked_input(ROOT, args.bank)
+    checked_input(ROOT, args.run)
+    output = checked_output(ROOT, args.output)
+    if output.exists():
+        raise ValueError('new_local_diagnostics_output_required')
+    before = bank_fingerprint(bank)
+    if args.audio_match_package is not None:
+        scope = checked_input(ROOT, args.audio_match_package)
+        with open_match_analysis_inputs(scope, expected_package_id=args.expected_package_id) as inputs:
+            analyze(args, inputs)
+        package_id = inputs.package_id
+    else:
+        if args.expected_package_id is not None:
+            raise ValueError('native_expected_package_id_requires_native_audio_scope')
+        package_path = checked_input(ROOT, args.handoff_package)
+        package = read_package(package_path)
+        roots = history_roots(ROOT / 'config/history.local.json')
+        with open_analysis_inputs(package, roots, args.run) as inputs:
+            analyze(args, inputs)
+        package_id = package_path.stem
+    receipt = seal_receipt(output, inputs, before, bank_fingerprint(bank), package_id=package_id)
+    print(json.dumps({'complete': receipt['complete'], 'receipt': str(output / 'analysis-receipt.json')}), flush=True)
+
+
+def analyze(args, inputs):
     if os.name == 'nt':
         import ctypes
         ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), 0x4000)
     import numpy as np
     from dota2_insights.ability_sound_matcher import AbilitySoundMatcher, mono8k
-    folder, output = args.run.resolve(), args.output.resolve()
+    folder, output = inputs.audio_folder, args.output.resolve()
+    if args.run.resolve() != folder:
+        raise ValueError('audio_analysis_capture_folder_conflict')
     from dota2_insights.history import checked_input, checked_output
     checked_input(ROOT, folder)
     checked_output(ROOT, output)
     if output.exists():
         raise ValueError('new_local_diagnostics_output_required')
-    if not (folder/'summary.json').exists():
+    if inputs.requires_capture_summary and not (folder/'summary.json').exists():
         raise ValueError('closed_recording_summary_required')
-    records = read_rows(folder/'segments.jsonl', 16*1024**2)
+    records = inputs.segment_rows()
     if not 1 <= len(records) <= 5000:
         raise ValueError('audio_segment_count_limit')
     if args.engine == 'mixture':
@@ -68,12 +105,13 @@ def main():
         for number, record in enumerate(records, 1):
             filename = record['audio_file']
             path = (folder/filename).resolve()
-            if (path.parent != folder or re.fullmatch(r'audio-[0-9]{4,6}\.wav', filename) is None
+            if (path.parent != folder or re.fullmatch(r'audio-[0-9]{4,8}\.wav', filename) is None
                     or path.stat().st_size > 4*1024**2 or sha(path) != record['sha256']):
                 raise ValueError('audio_source_integrity_failed')
             sources.append({'file': filename, 'sha256': record['sha256']})
             label = record.get('take_label') or {}
-            if (previous is None or previous['ended_by'] != 'five_second_segment'
+            if (previous is None or previous.get('ended_by') != 'five_second_segment'
+                    or abs(record['take_audio_start_offset_s'] - previous['take_audio_start_offset_s'] - previous['audio_seconds']) > 1e-6
                     or label.get('take_id') != (previous.get('take_label') or {}).get('take_id')):
                 matcher.reset()
             base = record['take_audio_start_offset_s']
@@ -113,7 +151,7 @@ def main():
     prediction_hash = sha(output/'predictions.jsonl')
     frozen = {'schema_version':1, 'inference_inputs':['PCM','fixed_source_bank'],
         'gsi_read_during_inference':False,'bank_sha256':matcher.sha256,
-        'source_journal_sha256':sha(folder/'segments.jsonl'), 'sources':sources,
+        'source_journal_sha256':inputs.refs['segments.jsonl']['sha256'], 'sources':sources,
         'prediction_sha256':prediction_hash,'scan_sha256':sha(output/'scans.jsonl'),
         'audio_seconds':audio_seconds,'elapsed_s':round(time.perf_counter()-started,3),
         'scan_reasons':dict(reasons),'candidate_skills':dict(skills),'clips_written':clip_count,
@@ -126,11 +164,11 @@ def main():
     frozen['waveform_policy'] = {'version':'differential_pcm_ncc_v1', 'provisional_gate':.30,
         'lag_samples':1600,'pitch_min':.97,'pitch_max':1.03,'pitch_steps':61} if args.waveform_check else None
     (output/'prediction-manifest.json').write_text(json.dumps(frozen,indent=2)+'\n',encoding='utf-8')
-    reference = folder/'reference-gsi.jsonl'
+    inputs.authorize_reference_review(output)
     edges = []
     prior = None
-    if reference.exists():
-        for row in read_rows(reference, 64*1024**2):
+    if inputs.reference_sha256 is not None:
+        for row in inputs.reference_rows():
             context = row['context']
             if prior:
                 old = prior['context']
@@ -151,7 +189,7 @@ def main():
             prior = row
     if sha(output/'predictions.jsonl') != prediction_hash:
         raise ValueError('prediction_changed_during_reference_review')
-    corroboration = {'schema_version':1,'prediction_sha256':prediction_hash,'reference_sha256':sha(reference) if reference.exists() else None,
+    corroboration = {'schema_version':1,'prediction_sha256':prediction_hash,'reference_sha256':inputs.reference_sha256,
         'own_sampled_cd_edges':edges,'own_edge_skills':dict(Counter(e['skill'] for e in edges)),
         'limits':['CD edges are sampled corroboration, not precise cast labels',
                   'own GSI cannot label enemy sounds; other heroes are not automatically false positives',

@@ -56,3 +56,7 @@ Helper侧下一步应在每局记录切换后，等待该局各记录队列排�
 本人GSI原生交接格式已在两仓库分别实现，其余通道仍需推进。不能将整个启动器索引伪改为closed来替代逐局协议。未给其他任务发消息或部署Pi；该文档是两边继续开发的接口依据。
 
 验证：245项完整离线回归通过，包含31项交接专项；真实记录重复扫描复用同一清单，接收包再次核验来源。证据在diagnostics/helper-handoff/verification-20261025.json和REPORT.md，原始资料不进入Git。
+
+## Foresight产品名兼容（2026-10-28）
+
+实时产品统一命名Foresight；新完整版布局foresight-*/Foresight/diagnostics，经济版foresight-economy-*/ForesightEconomy/diagnostics。发现与各原生记录索引也继续允许原helper-*/Dota2Helper及economy-*/Dota2Economy布局。helper_history/helper_releases配置键、协议kind、索引目录和工具文件名保持v1兼容，不能对已有清单及来源路径作字符串替换。本批未移动历史资料或放宽SHA、路径、身份、封存与收尾校验。生成目录和拒收边界109项相关离线回归通过run-237fbf22294e。

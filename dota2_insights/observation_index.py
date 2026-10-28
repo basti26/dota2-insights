@@ -17,8 +17,8 @@ def resolve_reference(reference, roots):
         raise ValueError('observation_index_reference_invalid')
     parts, prefix = path.parts, ()
     if key == 'helper_releases':
-        if (len(parts) != 7 or not parts[0].startswith(('helper-', 'economy-'))
-                or parts[1] not in ('Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
+        if (len(parts) != 7 or not parts[0].startswith(('foresight-', 'helper-', 'economy-'))
+                or parts[1] not in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
             raise ValueError('observation_index_release_layout_invalid')
         prefix, parts = parts[:3], parts[3:]
     if (len(parts) != 4 or parts[:2] != ('matches', 'sessions')

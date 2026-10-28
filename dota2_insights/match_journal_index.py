@@ -24,8 +24,8 @@ def resolve_reference(reference, roots):
         raise ValueError('match_journal_reference_invalid')
     parts = path.parts
     if key == 'helper_releases':
-        if (len(parts) != 8 or not parts[0].startswith(('helper-', 'economy-'))
-                or parts[1] not in ('Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
+        if (len(parts) != 8 or not parts[0].startswith(('foresight-', 'helper-', 'economy-'))
+                or parts[1] not in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
             raise ValueError('match_journal_release_layout_invalid')
         parts = parts[3:]
     if (len(parts) != 5 or parts[0] != 'self-economy' or parts[2] != 'closed-matches'
@@ -53,11 +53,11 @@ def history_bases(roots):
             raise ValueError('match_journal_history_unavailable')
         bases = [root] if key == 'helper_history' else []
         if key == 'helper_releases':
-            releases = [p for p in root.iterdir() if p.is_dir() and p.name.startswith(('helper-', 'economy-'))]
+            releases = [p for p in root.iterdir() if p.is_dir() and p.name.startswith(('foresight-', 'helper-', 'economy-'))]
             if len(releases) > 100:
                 raise ValueError('match_journal_release_limit')
             for release in releases:
-                bases.extend(release / app / 'diagnostics' for app in ('Dota2Helper', 'Dota2Economy'))
+                bases.extend(release / app / 'diagnostics' for app in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy'))
         for base in bases:
             yield key, root, base
 
@@ -81,7 +81,7 @@ def discover(roots, *, latest=20):
 
 @contextmanager
 def index_destination(project, roots, directory):
-    if directory not in ('native-match-handoff', 'equipment-handoff', 'draft-phase-handoff', 'minimap-run-handoff'):
+    if directory not in ('native-match-handoff', 'equipment-handoff', 'draft-phase-handoff', 'minimap-run-handoff', 'audio-match-handoff', 'performance-match-handoff'):
         raise ValueError('journal_index_directory_invalid')
     project = Path(project).resolve()
     output = checked_output(project, project / 'diagnostics' / directory)
@@ -138,7 +138,7 @@ def sync(project, roots, *, latest=20):
 
 
 def read_index(path, *, kind='native_match_journal_index'):
-    if kind not in ('native_match_journal_index', 'equipment_observation_index', 'draft_phase_prefix_index', 'closed_minimap_run_index'):
+    if kind not in ('native_match_journal_index', 'equipment_observation_index', 'draft_phase_prefix_index', 'closed_minimap_run_index', 'audio_match_handoff_index', 'performance_match_handoff_index'):
         raise ValueError('journal_index_kind_invalid')
     index = _json(_read(Path(path), 512 * 1024))
     entries = index.get('entries')

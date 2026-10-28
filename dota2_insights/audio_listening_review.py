@@ -13,7 +13,10 @@ import wave
 VERDICTS = ('unreviewed', 'audible', 'not_audible', 'uncertain')
 PHASES = ('unknown', 'cast', 'impact', 'sustain', 'end', 'mixed')
 PURPOSES = ('post_prediction_replay_review_only',
-            'posthoc_listening_only_never_template_training_or_accuracy_labels')
+            'posthoc_listening_only_never_template_training_or_accuracy_labels',
+            'post_prediction_candidate_diversity_review_only')
+CONTEXT_POLICIES = ('replay_or_GSI_context_visible_not_blind_not_independent',
+                    'candidate_context_visible_not_blind_not_independent')
 
 
 def sha(body):
@@ -98,7 +101,7 @@ def build_listening_page(review_path, output):
     manifest = {'kind': 'audio_listening_review', 'schema_version': 1, 'created_at_utc': utc(),
                 'status': 'preparing', 'review_source_sha256': sha(source),
                 'prediction_sha256': value['prediction_sha256'], 'match_id': value.get('match_id'),
-                'context_policy': 'replay_or_GSI_context_visible_not_blind_not_independent',
+                'context_policy': CONTEXT_POLICIES[1] if value['purpose'] == PURPOSES[2] else CONTEXT_POLICIES[0],
                 'training_eligible': False, 'accuracy_verified': False,
                 'builder_source_sha256': sha(Path(__file__).read_bytes()), 'clips': clips}
     write_json(output / 'manifest.json', manifest)
@@ -107,9 +110,13 @@ def build_listening_page(review_path, output):
     manifest['status'] = 'ready'
     completed = (json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode('utf-8')
     binding = sha(completed)
-    payload = json.dumps({'manifest_sha256': binding, 'clips': clips}, ensure_ascii=False, allow_nan=False)
+    payload = json.dumps({'manifest_sha256': binding, 'clips': clips,
+                          'context_policy': manifest['context_policy']}, ensure_ascii=False, allow_nan=False)
     payload = payload.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
-    (output / 'index.html').write_text(PAGE.replace('__PAYLOAD__', payload), encoding='utf-8')
+    description = ('这是已冻结的音频候选分层抽样，未提供录像/GSI施法真值；请判断指定声音是否清楚可闻。'
+                   if value['purpose'] == PURPOSES[2] else
+                   '这是带录像/GSI上下文的辅助听审。请判断指定声音是否清楚可闻，不确定就保留“无法判断”。')
+    (output / 'index.html').write_text(PAGE.replace('__PAYLOAD__', payload).replace('__DESCRIPTION__', description), encoding='utf-8')
     # Readiness is published only after every clip and the page exist.
     (output / 'manifest.json').write_bytes(completed)
     return output, len(clips)
@@ -121,7 +128,7 @@ def import_listening_notes(page, labels_path):
     if (not isinstance(manifest, dict) or manifest.get('kind') != 'audio_listening_review'
             or type(manifest.get('schema_version')) is not int or manifest['schema_version'] != 1
             or manifest.get('status') != 'ready'
-            or manifest.get('context_policy') != 'replay_or_GSI_context_visible_not_blind_not_independent'
+            or manifest.get('context_policy') not in CONTEXT_POLICIES
             or manifest.get('training_eligible') is not False or manifest.get('accuracy_verified') is not False):
         raise ValueError('invalid_listening_package')
     clips = manifest.get('clips')
@@ -185,11 +192,11 @@ def import_listening_notes(page, labels_path):
 
 PAGE = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>声音复听</title>
 <style>body{background:#18232e;color:#edf3f7;font:16px system-ui;margin:24px auto;max-width:960px;padding:0 16px}button,select,input,textarea{font:inherit;padding:8px}button{cursor:pointer}article{padding:18px;background:#243440;border-radius:10px;margin:16px 0}label{display:block;margin:12px 0}textarea{width:90%;height:60px}audio{width:100%}.muted{color:#b0bfca}header{position:sticky;top:0;background:#18232e;padding:12px 0}#notice{color:#ffe090}</style>
-<header><h1>声音复听</h1><p>这是带录像/GSI上下文的辅助听审。请判断指定声音是否清楚可闻，不确定就保留“无法判断”。</p>
+<header><h1>声音复听</h1><p>__DESCRIPTION__</p>
 <p class="muted">片段不自动播放；判断不会修改原录音和识别结果，也不会自动加入训练或计算准确率。页面不自动保存，关闭前请导出。</p>
 <button id="save">导出本次判断</button> <label style="display:inline">恢复上次导出 <input id="restore" type="file" accept=".json"></label><span id="progress"></span><p id="notice"></p></header><main id="clips"></main>
-<script>const data=__PAYLOAD__;const policy='replay_or_GSI_context_visible_not_blind_not_independent';
-const names={zuus_thundergods_wrath:'宙斯 · 雷神之怒',zuus_arc_lightning:'宙斯 · 弧形闪电',zuus_lightning_bolt:'宙斯 · 雷击',tidehunter_ravage:'潮汐猎人 · 毁灭',magnataur_reverse_polarity:'猛犸 · 两极反转',enigma_black_hole:'谜团 · 黑洞'};
+<script>const data=__PAYLOAD__;const policy=data.context_policy||'replay_or_GSI_context_visible_not_blind_not_independent';
+const names={zuus_thundergods_wrath:'宙斯 · 雷神之怒',zuus_arc_lightning:'宙斯 · 弧形闪电',zuus_lightning_bolt:'宙斯 · 雷击',tidehunter_ravage:'潮汐猎人 · 毁灭',magnataur_reverse_polarity:'猛犸 · 两极反转',enigma_black_hole:'谜团 · 黑洞',skeleton_king_reincarnation:'骷髅王 · 绝冥再生',kunkka_ghostship:'昆卡 · 幽灵船',pudge_dismember:'帕吉 · 肢解',doom_bringer_infernal_blade:'末日使者 · 阎刃',legion_commander_press_the_attack:'军团指挥官 · 强攻',legion_commander_moment_of_courage:'军团指挥官 · 勇气之霎'};
 const notes=data.clips.map(c=>({clip_id:c.clip_id,clip_sha256:c.sha256,verdict:'unreviewed',phase:'unknown',heard:'',comment:'',played:false}));
 const controls=[];let restoreGeneration=0;function node(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e}
 function gameClock(time){if(typeof time!=='number'||!Number.isFinite(time))return '未知';const seconds=Math.floor(Math.abs(time));return (time<0?'-':'')+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')}

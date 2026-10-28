@@ -160,11 +160,14 @@ def open_rows(root, session, *, expected_package_id=None, expected_binding_packa
 
 def review(root, session, *, expected_package_id=None, expected_binding_package_id=UNSPECIFIED):
     from collections import Counter
+    from .draft_diagnostics import DraftDiagnostics
+    diagnostics = DraftDiagnostics()
     counts, event_phases, ui_phases = Counter(), Counter(), Counter()
     candidates = ui_candidates = ui_without_snapshot = 0
     with open_rows(root, session, expected_package_id=expected_package_id,
                    expected_binding_package_id=expected_binding_package_id) as (manifest, rows):
-        for name, _, row, _ in rows:
+        for name, number, row, evidence in rows:
+            diagnostics.add(name, number, row, evidence)
             counts[name] += 1
             if name == 'events.jsonl':
                 snapshot = row.get('snapshot') or {}
@@ -185,7 +188,7 @@ def review(root, session, *, expected_package_id=None, expected_binding_package_
                 if phase == 'selection' and isinstance((view.get('advice') or {}).get('candidates'), list) and view['advice']['candidates']:
                     ui_candidates += 1
     present = {spec['file'] for spec in manifest['prefixes']}
-    return {'session_id': session, 'match_id_at_cutoff': manifest['match_id_at_cutoff'],
+    return {'session_id': session, 'diagnostics': diagnostics.result(), 'match_id_at_cutoff': manifest['match_id_at_cutoff'],
         'cutoff_recorded_at_utc': manifest['cutoff_recorded_at_utc'],
         'last_observed_at_utc': manifest['last_observed_at_utc'],
         'effective_match_id': manifest['effective_match_id'], 'binding_package_id': manifest['binding_package_id'],

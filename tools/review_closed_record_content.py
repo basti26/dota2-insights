@@ -14,6 +14,10 @@ def generate(root=ROOT, *, roots=None):
     from dota2_insights.closed_journals import read_package
     from dota2_insights.history import history_roots, checked_output
     from dota2_insights.record_content_review import summarize, render_markdown, item_catalogue
+    from dota2_insights.performance_review import review as review_performance, render_markdown as render_performance
+    from dota2_insights.audio_integrity_review import review as review_audio, render_markdown as render_audio
+    from dota2_insights.draft_diagnostics import render_markdown as render_bp_diagnostics
+    from dota2_insights.gsi_evidence_census import render_markdown as render_gsi_census
     root = Path(root).resolve()
     roots = roots if roots is not None else history_roots(root/'config/history.local.json')
     folder = root/'diagnostics/helper-handoff'
@@ -24,12 +28,16 @@ def generate(root=ROOT, *, roots=None):
     if (index.get('kind') != 'helper_handoff_index' or not isinstance(index.get('runs'),list)
             or len(index['runs']) > 25):
         raise ValueError('content_index_invalid')
-    reports, skipped = [], []
+    reports, skipped, performance_reports, audio_reports = [], [], [], []
     catalogue, catalogue_source = item_catalogue(root)
     legacy_gsi_scopes = set()
     legacy_observation_scopes = set()
     legacy_bp_sources = set()
     legacy_minimap_sources = set()
+    legacy_audio_waveforms = set()
+    legacy_audio_capture_files = set()
+    legacy_performance_sources = set()
+    legacy_performance_paths = set()
     for run in index['runs']:
         pid = run.get('package_id')
         if run['state'] not in ('ready','ready_with_gaps'):
@@ -41,6 +49,18 @@ def generate(root=ROOT, *, roots=None):
         if package['launcher_run_id'] != run['launcher_run_id']:
             raise ValueError('content_index_package_mismatch')
         reports.append(summarize(package, roots, catalogue=catalogue, catalogue_source=catalogue_source))
+        performance_reports.append(review_performance(package, roots))
+        for game in performance_reports[-1]['matches']:
+            csv_ref, context_ref = game['csv_source'], game['context_source']
+            legacy_performance_sources.add((game['capture_run_id'], game['match_id'], game['game_session_id'],
+                game['record_session_id'], csv_ref['sha256'], context_ref['sha256']))
+            legacy_performance_paths.add((csv_ref['root_key'], csv_ref['path'], csv_ref['sha256']))
+        audio_reports.append(review_audio(package, roots))
+        for capture in audio_reports[-1]['captures']:
+            for segment in capture['segments']:
+                ref=segment['source']
+                legacy_audio_waveforms.add((ref['root_key'],ref['path'],ref['sha256']))
+                legacy_audio_capture_files.add((capture['capture_run_id'],PurePosixPath(ref['path']).name,ref['sha256']))
         for component in package.get('components', []):
             if component.get('kind') == 'minimap' and component.get('state') == 'closed_verified':
                 for journal in component.get('journals', []):
@@ -66,10 +86,11 @@ def generate(root=ROOT, *, roots=None):
     from dota2_insights.match_journal_index import read_index, resolve_reference
     from dota2_insights.match_journal_review import review as review_native, render_markdown as render_native
     native_path = root/'diagnostics/native-match-handoff/index.json'
-    native_reports, native_skipped = [], []
+    native_reports, native_skipped, native_entries = [], [], []
     native_state = 'missing_not_treated_as_zero'
     if native_path.exists():
         native_index = read_index(native_path)
+        native_entries = native_index['entries']
         native_state = 'read_and_sources_revalidated'
         for entry in native_index['entries']:
             if entry['state'] != 'ready_with_gaps':
@@ -159,29 +180,124 @@ def generate(root=ROOT, *, roots=None):
                 streams_also_in_closed_launcher_scope=[name for name in result['stream_rows']
                     if (entry['root_key'], PurePosixPath(*prefix, 'minimap-learning', 'run_' + run_id, name).as_posix())
                         in legacy_minimap_sources])
+            for scope in result.get('explicit_context_scopes', []):
+                scope['linked_native_gsi_packages'] = [gsi['package_id'] for gsi in native_reports
+                    if all(gsi[key] == scope[key] for key in ('match_id','game_session_id','record_session_id'))]
+                scope['association_basis'] = 'explicit_relay_context_match_and_both_sessions_not_time_inference'
+            from dota2_insights.minimap_gsi_alignment import prepare as prepare_alignment, summarize as summarize_alignment
+            alignment = prepare_alignment(entry, native_entries, roots)
+            result['gsi_source_alignment'] = summarize_alignment(alignment, native_index_state=native_state)
             minimap_reports.append(result)
+    from dota2_insights.audio_match_index import read_index as read_audio_index, resolve_reference as resolve_audio
+    from dota2_insights.audio_match_handoff import review as review_audio_match, render_markdown as render_audio_match
+    audio_path=root/'diagnostics/audio-match-handoff/index.json'
+    audio_match_reports,audio_match_skipped=[],[]
+    audio_match_state='missing_not_treated_as_zero'
+    if audio_path.exists():
+        audio_index=read_audio_index(audio_path)
+        audio_match_state='read_and_sources_revalidated'
+        for entry in audio_index['entries']:
+            if entry['state']!='ready_with_gaps':
+                audio_match_skipped.append({'state':entry['state'],'reason':'audio_match_handoff_not_ready',
+                    'root_key':entry['root_key'],'source':entry['source']})
+                continue
+            source_folder=resolve_audio(entry,roots)
+            result=review_audio_match(source_folder,expected_package_id=entry['package_id'],
+                native_entries=native_entries,roots=roots,native_index_state=native_state)
+            if any(result[key]!=entry.get(key) for key in
+                   ('match_id','game_session_id','record_session_id','audio_capture_run_id','recording_integrity')):
+                raise ValueError('content_audio_match_index_identity_conflict')
+            capture=PurePosixPath(entry['source']).parent.parent
+            wavs=result.pop('waveform_sha256_by_file')
+            path_overlap=sum((entry['root_key'],(capture/name).as_posix(),sha) in legacy_audio_waveforms
+                             for name,sha in wavs.items())
+            overlap=sum((result['audio_capture_run_id'],name,sha) in legacy_audio_capture_files
+                        for name,sha in wavs.items())
+            result.update(root_key=entry['root_key'],source=entry['source'],
+                waveforms_also_in_closed_launcher_scope=overlap,
+                legacy_same_path_overlap_count=path_overlap,
+                legacy_overlap_basis='same_declared_capture_run_file_name_and_verified_waveform_sha_not_time_or_audio_similarity',
+                counts_must_not_be_added_to_legacy=overlap>0,
+                linked_native_gsi_packages=[gsi['package_id'] for gsi in native_reports
+                    if result['match_id'] is not None and all(gsi[key]==result[key] for key in
+                        ('match_id','game_session_id','record_session_id'))],
+                native_gsi_association_basis='explicit_public_match_and_both_runtime_sessions_not_per_source_id_join')
+            audio_match_reports.append(result)
+    from dota2_insights.performance_index import read_index as read_performance_index, resolve_reference as resolve_performance, MAX_READ_BYTES
+    from dota2_insights.performance_handoff import review as review_performance_match, render_markdown as render_performance_match
+    performance_path = root/'diagnostics/performance-match-handoff/index.json'
+    performance_match_reports, performance_match_skipped = [], []
+    performance_match_state = 'missing_not_treated_as_zero'
+    if performance_path.exists():
+        performance_index = read_performance_index(performance_path)
+        performance_match_state = 'read_and_sources_revalidated'
+        reserved = 0
+        for entry in performance_index['entries']:
+            if entry['state'] != 'ready_with_gaps':
+                performance_match_skipped.append({'state':entry['state'], 'reason':'performance_match_handoff_not_ready',
+                    'error_type':entry.get('error_type'), 'root_key':entry['root_key'], 'source':entry['source']})
+                continue
+            cost = entry.get('source_bytes')
+            if type(cost) is not int or cost < 0 or reserved+cost > MAX_READ_BYTES:
+                raise ValueError('content_performance_source_budget')
+            reserved += cost
+            source_folder = resolve_performance(entry, roots)
+            result = review_performance_match(source_folder, entry['package_id'], source_budget=cost)
+            game = result['matches'][0]
+            if (result['capture_run_id'] != entry.get('capture_run_id')
+                    or any(game[key] != entry.get(key) for key in ('match_id','game_session_id','record_session_id'))
+                    or sum(s['bytes'] for s in result['source_files'].values()) != cost):
+                raise ValueError('content_performance_index_identity_conflict')
+            csv_sha = result['source_files']['frames.csv']['sha256']
+            context_sha = result['source_files']['context.jsonl']['sha256']
+            identity = (result['capture_run_id'], game['match_id'], game['game_session_id'], game['record_session_id'], csv_sha, context_sha)
+            csv_path = (PurePosixPath(entry['source']).parent/'frames.csv').as_posix()
+            overlap = identity in legacy_performance_sources
+            result.update(root_key=entry['root_key'], source=entry['source'], package_id=entry['package_id'],
+                also_in_closed_launcher_scope=overlap, counts_must_not_be_added_to_legacy=overlap,
+                legacy_same_path_overlap=(entry['root_key'],csv_path,csv_sha) in legacy_performance_paths,
+                legacy_overlap_basis='same_capture_public_match_and_both_sessions_verified_CSV_and_context_SHA_not_time',
+                linked_native_gsi_packages=[gsi['package_id'] for gsi in native_reports
+                    if game['match_id'] is not None and all(gsi[key] == game[key] for key in
+                        ('match_id','game_session_id','record_session_id'))])
+            performance_match_reports.append(result)
     # Only write once all selected sources have passed their after-analysis check.
     output = checked_output(root, root/'diagnostics/record-content'/
         datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
     output.mkdir(parents=True,exist_ok=False)
     (output/'report.json').write_text(json.dumps({'reports':reports,'skipped':skipped,
+        'performance_reports': performance_reports, 'audio_integrity_reports': audio_reports,
         'native_reports':native_reports, 'native_skipped':native_skipped, 'native_index_state':native_state,
         'equipment_reports':equipment_reports, 'equipment_skipped':equipment_skipped, 'equipment_index_state':equipment_state,
         'bp_phase_reports':bp_reports, 'bp_phase_skipped':bp_skipped, 'bp_phase_index_state':bp_state,
-        'minimap_run_reports':minimap_reports, 'minimap_run_skipped':minimap_skipped, 'minimap_run_index_state':minimap_state},
+        'minimap_run_reports':minimap_reports, 'minimap_run_skipped':minimap_skipped, 'minimap_run_index_state':minimap_state,
+        'audio_match_reports':audio_match_reports,'audio_match_skipped':audio_match_skipped,'audio_match_index_state':audio_match_state,
+        'performance_match_reports':performance_match_reports,'performance_match_skipped':performance_match_skipped,
+        'performance_match_index_state':performance_match_state},
         ensure_ascii=False,indent=2,allow_nan=False),encoding='utf-8')
     (output/'REPORT.md').write_text(render_markdown(reports)
         + render_native(native_reports, native_skipped, index_state=native_state)
         + render_equipment(equipment_reports, equipment_skipped, index_state=equipment_state)
         + render_bp(bp_reports, bp_skipped, index_state=bp_state)
-        + render_minimap(minimap_reports, minimap_skipped, index_state=minimap_state),encoding='utf-8')
+        + render_minimap(minimap_reports, minimap_skipped, index_state=minimap_state)
+        + '\n' + render_performance(performance_reports) + render_audio(audio_reports)
+        + render_audio_match(audio_match_reports,audio_match_skipped,index_state=audio_match_state)
+        + render_performance_match(performance_match_reports,performance_match_skipped,index_state=performance_match_state)
+        + render_bp_diagnostics(bp_reports) + render_gsi_census(native_reports),encoding='utf-8')
     return {'report':str(output/'REPORT.md'),'runs_reviewed':len(reports),
+            'performance_game_scopes_reviewed': sum(len(r['matches']) for r in performance_reports),
+            'performance_match_scopes_reviewed':len(performance_match_reports),
+            'performance_match_skipped':performance_match_skipped, 'performance_match_index_state':performance_match_state,
+            'audio_segments_verified': sum(c['segments_verified'] for r in audio_reports for c in r['captures']),
             'native_matches_reviewed': len(native_reports), 'skipped':skipped, 'native_skipped':native_skipped,
             'native_index_state':native_state, 'equipment_sessions_reviewed':len(equipment_reports),
             'equipment_skipped':equipment_skipped, 'equipment_index_state':equipment_state,
             'bp_phase_sessions_reviewed':len(bp_reports), 'bp_phase_skipped':bp_skipped, 'bp_phase_index_state':bp_state,
             'minimap_runs_reviewed':len(minimap_reports), 'minimap_run_skipped':minimap_skipped,
-            'minimap_run_index_state':minimap_state}
+            'minimap_run_index_state':minimap_state,
+            'audio_match_scopes_reviewed':len(audio_match_reports),'audio_match_skipped':audio_match_skipped,
+            'audio_match_index_state':audio_match_state,
+            'audio_match_segments_verified':sum(row['segments_verified'] for row in audio_match_reports)}
 
 
 def main():

@@ -17,6 +17,7 @@ import re
 from statistics import median
 
 from .dataset import SampleDataset
+from .offline_io import check_input_paths, check_match_metadata, checked_match
 
 _HERO = re.compile(r"npc_dota_hero_[a-z0-9_]{1,50}")
 _MATCH = re.compile(r"[0-9]{1,32}")
@@ -39,6 +40,7 @@ def _number(value, bound=1000000):
 
 
 def _digest(path, limit=MAX_SOURCE_BYTES):
+    check_input_paths(path)
     size, checksum = 0, hashlib.sha256()
     with Path(path).open("rb") as handle:
         while chunk := handle.read(1024 ** 2):
@@ -50,6 +52,7 @@ def _digest(path, limit=MAX_SOURCE_BYTES):
 
 
 def _json(path):
+    check_input_paths(path)
     with Path(path).open("rb") as handle:
         content = handle.read(MAX_SOURCE_BYTES + 1)
     if len(content) > MAX_SOURCE_BYTES:
@@ -57,14 +60,17 @@ def _json(path):
     value = json.loads(content)
     if not isinstance(value, dict):
         raise ValueError("alignment_expected_object")
+    check_match_metadata(value)
     return value, {"sha256": hashlib.sha256(content).hexdigest(), "bytes": len(content)}
 
 
 def read_replay_samples(path):
     """Project only documented exporter fields; never retain arbitrary entities."""
     path = Path(path)
-    source_hash, source_size = _digest(path)
+    check_input_paths(path)
     manifest, manifest_hash = _json(path.with_name("manifest.json"))
+    checked_match(manifest.get('match_id'))
+    source_hash, source_size = _digest(path)
     declared = manifest.get("files", {}).get(path.name, {})
     if (manifest.get("kind") != "offline_replay_archive"
             or declared.get("sha256") != source_hash or declared.get("bytes") != source_size

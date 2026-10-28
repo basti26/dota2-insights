@@ -1,5 +1,7 @@
 # 对局性能离线复核
 
+新逐局采集包有显式入口tools/review_performance_match.py，也已接入tools/review_recordings.py的自动索引及日常联合报告，见PER_MATCH_PERFORMANCE_HANDOFF_V1.md；它允许助手其他观察继续运行，但本包的采集器必须先关闭并验证最终诊断。下述旧专用入口仍消费闭合启动器包。联合报告分开新旧格式并标记重合，不把同一CSV作为新增采样。
+
 入口：`C:\Python312\python.exe tools/review_performance_recordings.py --latest 3`。
 在本仓库根目录执行，先同步现有闭合启动器记录，再生成
 `diagnostics/performance-review/<UTC>/REPORT.md` 与 `report.json`。

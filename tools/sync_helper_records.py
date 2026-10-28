@@ -24,6 +24,10 @@ def main():
     bp = sync_bp(ROOT, roots, latest=args.latest)
     from dota2_insights.minimap_index import sync as sync_minimap
     minimap = sync_minimap(ROOT, roots, latest=args.latest)
+    from dota2_insights.audio_match_index import sync as sync_audio
+    audio = sync_audio(ROOT, roots, latest=args.latest)
+    from dota2_insights.performance_index import sync as sync_performance
+    performance = sync_performance(ROOT, roots, latest=args.latest)
     print(json.dumps({'index': str(ROOT / 'diagnostics/helper-handoff/index.json'),
         'counts': result['counts'], 'runs': [{'state': r['state'], 'matches': [a['match_id'] for a in r.get('matches', [])],
                                             'already_indexed': r.get('already_indexed')} for r in result['runs']],
@@ -39,7 +43,15 @@ def main():
         'minimap_run_index': str(ROOT / 'diagnostics/minimap-run-handoff/index.json'),
         'minimap_run_handoffs':minimap['entries'],
         'minimap_duplicate_packages_omitted':minimap['duplicate_packages_omitted'],
-        'minimap_conflicting_run_packages':minimap['conflicting_run_packages']}, ensure_ascii=False))
+        'minimap_conflicting_run_packages':minimap['conflicting_run_packages'],
+        'audio_match_index':str(ROOT/'diagnostics/audio-match-handoff/index.json'),
+        'audio_match_handoffs':audio['entries'],
+        'audio_match_duplicate_packages_omitted':audio['duplicate_packages_omitted'],
+        'audio_match_conflicting_scope_packages':audio['conflicting_scope_packages'],
+        'performance_match_index':str(ROOT/'diagnostics/performance-match-handoff/index.json'),
+        'performance_match_handoffs':performance['entries'],
+        'performance_match_duplicate_packages_omitted':performance['duplicate_packages_omitted'],
+        'performance_match_conflicting_capture_packages':performance['conflicting_capture_packages']}, ensure_ascii=False))
 
 
 if __name__ == '__main__':
