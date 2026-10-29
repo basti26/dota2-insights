@@ -1,5 +1,5 @@
 """Join recorded source IDs, never nearby timestamps or inferred pixel identities."""
-from collections import Counter
+from collections import Counter, defaultdict
 from contextlib import ExitStack
 import re
 
@@ -24,6 +24,10 @@ def prepare(entry, native_entries, roots):
     root, run = resolve_minimap(entry, roots)
     samples, wanted, found = [], set(), {}
     source_packages = []
+    selected_by_scope, verified_by_scope = defaultdict(list), defaultdict(set)
+    native_entries = list(native_entries)
+    for native in native_entries:
+        selected_by_scope[tuple(native.get(k) for k in IDENTITY)].append(native)
     with ExitStack() as stack:
         doc, _, rows = stack.enter_context(open_minimap(root, run, expected_package_id=entry['package_id']))
         if doc['run_id'] != entry.get('run_id'):
@@ -55,6 +59,7 @@ def prepare(entry, native_entries, roots):
                 continue
             manifest, records = stack.enter_context(open_gsi(
                 resolve_gsi(native, roots), expected_package_id=native['package_id']))
+            verified_by_scope[scope].add(native['package_id'])
             if tuple(manifest[k] for k in IDENTITY) != scope:
                 raise ValueError('alignment_native_index_identity_conflict')
             source_packages.append(native['package_id'])
@@ -98,8 +103,21 @@ def prepare(entry, native_entries, roots):
                     and position['alive'] is True and position['source_age_s'] is not None
                     and 0 <= position['source_age_s'] <= 5 and position['paused'] is False))
     counts = Counter(item['reason'] or 'exact_recorded_source_id' for item in samples)
+    scope_rows = Counter(tuple(item['context'][k] for k in IDENTITY) for item in samples
+                         if item.get('context') is not None and item['context']['match_id'] is not None
+                         and source_id(item['context'].get('gsi_source_id')))
+    scope_selection = []
+    for scope, count in sorted(scope_rows.items()):
+        packages = sorted(verified_by_scope[scope])
+        status = ('matching_packages_verified' if packages else 'matching_index_entries_not_ready'
+                  if selected_by_scope[scope] else 'scope_not_in_selected_index')
+        scope_selection.append({**dict(zip(IDENTITY, scope)), 'frame_rows': count,
+            'lookup_status': status, 'verified_native_package_ids': packages,
+            'indexed_not_ready_entries': sum(n.get('state') != 'ready_with_gaps' for n in selected_by_scope[scope]),
+            'wanted_distinct_source_ids': sum(key[:3] == scope for key in wanted)})
     return {'schema_version': 1, 'kind': 'minimap_gsi_source_alignment', 'run_id': run,
         'minimap_package_id': entry['package_id'], 'native_package_ids': sorted(set(source_packages)),
+        'native_scope_selection': scope_selection,
         'sample_rows': len(samples), 'outcomes': dict(counts), 'samples': samples,
         'source_verified_before_and_after': True, 'images_verified': False,
         'pixel_identity_verified': False, 'calibration_verified': False,
@@ -120,6 +138,14 @@ def render_markdown(report):
                      f"{coordinates} | {item.get('position_evidence_usable', False)} |")
     if len(report['samples']) > 100:
         lines.append('\n正文只列前100条；JSON保留所有实际样本。')
+    lines += ['', '## GSI来源范围选择', '',
+              'scope_not_in_selected_index仅表示本次索引没有选中该比赛和双会话，不证明原记录不存在。',
+              '有已核验包仍缺某来源ID时，可能是采样省略；不能按时间补配对。', '',
+              '| 比赛 | 范围状态 | 涉及帧 | 不同来源ID | 已核验包数 |',
+              '|---|---|---:|---:|---:|']
+    for scope in report.get('native_scope_selection', []):
+        lines.append(f"| {scope['match_id']} | {scope['lookup_status']} | {scope['frame_rows']} | "
+                     f"{scope['wanted_distinct_source_ids']} | {len(scope['verified_native_package_ids'])} |")
     return '\n'.join(lines) + '\n'
 
 
@@ -130,6 +156,7 @@ def summarize(report, *, native_index_state):
         'basis', 'source_verified_before_and_after', 'images_verified', 'pixel_identity_verified',
         'calibration_verified')} | {
         'native_source_index_state': native_index_state,
+        'native_scope_selection': report.get('native_scope_selection', []),
         'frame_source_id_rows': sum(source_id((item.get('context') or {}).get('gsi_source_id')) for item in samples),
         'exact_source_record_rows': sum(item['source_record_status'] == 'exact_recorded_source_id' for item in samples),
         'usable_position_rows': sum(item.get('position_evidence_usable', False) for item in samples),

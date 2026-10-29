@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 from array import array
 import hashlib
+import heapq
 import io
 import math
 import statistics
@@ -105,6 +106,7 @@ def _read_csv_rows(stream_reader, path, application, source_sha256, source_bytes
             return index >= 0 and first <= last <= ends[index]
     excluded_scope = 0
     streams, row_count, other_rows, invalid_rows = {}, 0, 0, 0
+    slow_rows = []
     for values in reader:
         row_count += 1
         if row_count > MAX_CSV_ROWS:
@@ -193,6 +195,31 @@ def _read_csv_rows(stream_reader, path, application, source_sha256, source_bytes
             cpu_interval = parsed["mscpubusy"] + parsed["mscpuwait"]
             if cpu_interval > 0:
                 stream["cpu_intervals"].append(cpu_interval)
+        if scoped:
+            intervals = []
+            submitted = parsed.get('msbetweenpresents')
+            if submitted is not None and submitted > 0:
+                intervals.append({'metric': 'submitted', 'interval_ms': submitted,
+                                  'qpc_start': qpc-submitted*qpc_frequency_hz/1000, 'qpc_end': qpc})
+            displayed = parsed.get('msbetweendisplaychange') if dropped == '0' else None
+            if displayed is not None and displayed > 0:
+                delay = float(values[indices['msuntildisplayed']])  # Already checked by scoped metric gate.
+                intervals.append({'metric': 'displayed', 'interval_ms': displayed,
+                    'qpc_start': qpc+(delay-displayed)*qpc_frequency_hz/1000,
+                    'qpc_end': qpc+delay*qpc_frequency_hz/1000})
+            rank = max((item['interval_ms'] for item in intervals), default=0)
+            if rank > 1000/30:
+                for item in intervals:
+                    item['context_window_index'] = bisect_right(starts, item['qpc_start'])-1
+                event = {'csv_data_row': row_count, 'presentation_qpc': qpc,
+                         'process_id': key[0], 'swap_chain': key[1], 'present_runtime': key[2],
+                         'layer_index': key[3], 'frame_type': key[4], 'rank_ms': rank,
+                         'intervals': intervals, 'dropped': dropped}
+                candidate = (rank, -row_count, event)
+                if len(slow_rows) < 5:
+                    heapq.heappush(slow_rows, candidate)
+                elif candidate[:2] > slow_rows[0][:2]:
+                    heapq.heapreplace(slow_rows, candidate)
     if not streams:
         raise ValueError("no_attributable_dota2_presentmon_rows")
     reports = []
@@ -211,6 +238,12 @@ def _read_csv_rows(stream_reader, path, application, source_sha256, source_bytes
             "source_sha256": source_sha256, "source_bytes": source_bytes,
             "application_filter": application, "csv_row_count": row_count, "other_application_rows": other_rows,
             "invalid_shape_or_identity_rows": invalid_rows, "streams": reports,
+            'long_interval_examples': [item[2] for item in sorted(slow_rows, key=lambda item: (-item[0], -item[1]))],
+            'long_interval_example_policy': {'limit': 5, 'threshold_ms_exclusive': 1000/30,
+                'status': 'scoped_recorded_examples' if scoped else 'unavailable_without_validated_qpc_scope',
+                'unit': 'CSV data row with separate submitted/displayed intervals; not two independent stalls',
+                'ranking': 'largest valid interval per row, descending; equal intervals prefer earlier row',
+                'workload_causality_verified': False, 'whole_match_coverage_verified': False},
             "available_metric_columns": [name for name in METRICS if name in indices],
             "clock_alignment": "not_correlated_with_hud_utc",
             "match_binding": "user_selected_csv_not_verified_match_lineage",

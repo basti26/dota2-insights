@@ -189,8 +189,11 @@ def analyze(args, inputs):
             prior = row
     if sha(output/'predictions.jsonl') != prediction_hash:
         raise ValueError('prediction_changed_during_reference_review')
+    from dota2_insights.audio_reference_coverage import annotate
+    pcm_coverage = annotate(edges, records)
     corroboration = {'schema_version':1,'prediction_sha256':prediction_hash,'reference_sha256':inputs.reference_sha256,
         'own_sampled_cd_edges':edges,'own_edge_skills':dict(Counter(e['skill'] for e in edges)),
+        'sampled_reference_pcm_coverage': pcm_coverage,
         'limits':['CD edges are sampled corroboration, not precise cast labels',
                   'own GSI cannot label enemy sounds; other heroes are not automatically false positives',
                   'multiple candidate windows may describe one continuous effect',

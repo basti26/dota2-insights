@@ -71,6 +71,24 @@ class ObservationHandoffTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             verify(self.root, self.session)
 
+    def test_continuity_in_review_uses_verified_original_rows(self):
+        import copy
+        first = copy.deepcopy(self.row)
+        first['attempt']['hero']['slots'] = [{'slot_id': 'main_1', 'status': 'known', 'item_id': 'blink'}]
+        second = copy.deepcopy(first)
+        second['captured_at_utc'] = second['attempt']['captured_at_utc'] = '2026-10-26T00:00:01Z'
+        second['attempt']['hero']['slots'][0].update(status='unknown', item_id=None, candidate=None)
+        raw = b''.join((json.dumps(r) + '\n').encode() for r in (first, second))
+        self.source.write_bytes(raw)
+        self.manifest['payload'].update(bytes=len(raw), rows=2, sha256=hashlib.sha256(raw).hexdigest())
+        self.manifest['accepted_observations_at_cutoff'] = 2
+        self.write_manifest()
+        result = review(self.root, self.session, catalogue={'blink': {'cost': 2250}})
+        event = result['equipment_continuity']['episodes'][0]
+        self.assertEqual(event['known']['evidence']['line'], 1)
+        self.assertEqual(event['first_unknown']['evidence']['line_sha256'], hashlib.sha256(raw.splitlines(keepends=True)[1]).hexdigest())
+        self.assertTrue(result['source_verified_before_and_after'])
+
     def test_empty_manifest_not_a_zero_observation_accuracy_claim(self):
         self.source.unlink()
         self.manifest.update(payload=None, accepted_observations_at_cutoff=0)

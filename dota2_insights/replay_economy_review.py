@@ -7,7 +7,10 @@ from collections import Counter, defaultdict
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
+
+from .replay_holdout import refuse_locked_match
 
 
 def _rows(path, *, limit=256 * 1024 ** 2):
@@ -33,7 +36,13 @@ def _number(value):
 
 
 def _item(value):
-    return value.removeprefix("item_") if isinstance(value, str) else None
+    name = value.removeprefix("item_") if isinstance(value, str) else None
+    return name if name and re.fullmatch(r"[a-z0-9_]+", name) else None
+
+
+def _usable_slot(status, item_key, occupied_status):
+    return (status == "empty" and item_key is None
+            or status == occupied_status and item_key is not None)
 
 
 def _source(path):
@@ -44,6 +53,8 @@ def _source(path):
 
 def _slot_number(slot):
     name = slot.get("slot_id", "")
+    if not isinstance(name, str):
+        return None
     if name in {f"main_{i}" for i in range(1, 7)}:
         return int(name[-1]) - 1
     if name in {f"backpack_{i}" for i in range(1, 4)}:
@@ -87,7 +98,13 @@ def compare(observations, samples, *, lines=(), tolerance_s=1.0, max_observation
         raise ValueError("bounded_replay_manifest_required")
     manifest_source = _source(manifest)
     archive = json.loads(manifest.read_text(encoding="utf-8"))
+    if not isinstance(archive, dict):
+        raise ValueError("successful_source_bound_replay_archive_required")
+    # Metadata only until both declared identities have passed the public lock.
+    refuse_locked_match(archive.get("match_id"))
+    refuse_locked_match(archive.get("parsed_match_id"))
     if (archive.get("kind") != "offline_replay_archive" or not archive.get("match_id")
+            or archive.get("parsed_match_id") != archive.get("match_id")
             or archive.get("source_unchanged_stat") is not True
             or archive.get("parse_error") or archive.get("truncated_at_tick") is not None
             or archive.get("export_complete") is False
@@ -182,28 +199,38 @@ def compare(observations, samples, *, lines=(), tolerance_s=1.0, max_observation
             counts[row["status"]] += 1
             continue
         sample = pair[1]
-        inventory = {item["slot"]: item for item in sample.get("inventory", [])
-                     if type(item.get("slot")) is int and 0 <= item["slot"] <= 8}
+        reference_slots = [item for item in sample.get("inventory", [])
+                           if type(item.get("slot")) is int and 0 <= item["slot"] <= 8]
+        reference_counts = Counter(item["slot"] for item in reference_slots)
+        inventory = {item["slot"]: item for item in reference_slots}
         comparisons = []
         observed_slots = row.pop("slots")
+        observed_counts = Counter(item["slot"] for item in observed_slots)
         for item in observed_slots:
             truth = inventory.get(item["slot"])
-            if item["status"] not in {"known", "empty"}:
+            truth_key = _item(truth.get("item_key", truth.get("item_name"))) if truth else None
+            if observed_counts[item["slot"]] != 1:
+                status = "recognition_duplicate_slot"
+            elif not _usable_slot(item["status"], item["item_key"], "known"):
                 status = "recognition_unknown"
-            elif truth is None or truth.get("status") not in {"occupied", "empty"}:
+            elif reference_counts[item["slot"]] > 1:
+                status = "replay_duplicate_slot"
+            elif truth is None or not _usable_slot(truth.get("status"), truth_key, "occupied"):
                 status = "replay_slot_unknown"
             elif item["status"] == "empty":
                 status = "same_empty" if truth["status"] == "empty" else "recognized_empty_replay_occupied"
-            elif truth["status"] == "occupied" and item["item_key"] == _item(truth.get("item_key", truth.get("item_name"))):
+            elif truth["status"] == "occupied" and item["item_key"] == truth_key:
                 status = "same_item_id"
             else:
                 status = "item_id_disagreement"
             comparisons.append({**item, "replay": truth, "comparison": status})
             counts[status] += 1
-        fully_known = (len({item["slot"] for item in observed_slots}) == 9
-                       and all(item["status"] in {"known", "empty"} for item in observed_slots)
-                       and len(inventory) == 9
-                       and all(item.get("status") in {"occupied", "empty"} for item in inventory.values()))
+        fully_known = (len(observed_slots) == 9 and len(observed_counts) == 9
+                       and all(_usable_slot(item["status"], item["item_key"], "known") for item in observed_slots)
+                       and len(reference_slots) == 9 and len(inventory) == 9
+                       and all(_usable_slot(item.get("status"),
+                           _item(item.get("item_key", item.get("item_name"))), "occupied")
+                           for item in inventory.values()))
         if fully_known:
             seen_bag = Counter(item["item_key"] for item in observed_slots if item["status"] == "known")
             replay_bag = Counter(_item(item.get("item_key", item.get("item_name")))

@@ -242,6 +242,12 @@ def render_markdown(reports, skipped, *, index_state):
                 f"来源ID已记录：{alignment['frame_source_id_rows']}条；未配对原因：{alignment['unmatched_reasons']}；"
                 f"原生GSI索引：{alignment['native_source_index_state']}。",
                 '以上为来源覆盖，不是识别准确率；像素身份和坐标映射仍未认证。', '']
+            for scope in alignment.get('native_scope_selection', []):
+                status = {'matching_packages_verified': '匹配范围包已核验',
+                          'matching_index_entries_not_ready': '匹配索引项未就绪',
+                          'scope_not_in_selected_index': '本次索引未选中对应范围（不代表没有采集）'}[scope['lookup_status']]
+                lines.append(f"- GSI范围：比赛{scope['match_id']}，{status}；涉及{scope['frame_rows']}帧、"
+                             f"{scope['wanted_distinct_source_ids']}个不同来源ID。")
     for row in skipped:
         lines.append(f"- 未分析：{row.get('state', 'unknown')} / {row.get('reason', '未通过交接')}")
     return '\n'.join(lines) + '\n'

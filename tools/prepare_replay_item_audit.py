@@ -13,6 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from dota2_insights.replay_holdout import refuse_locked_match
 from tools.evaluate_replay_baselines import game_guard
 
 WINDOW_S = 3.0
@@ -44,12 +45,14 @@ def prepare(report_path, observations_path, archive_directory):
     report_path, observations_path, archive_directory = map(Path, (report_path, observations_path, archive_directory))
     if report_path.stat().st_size > 16 * 1024 ** 2:
         raise ValueError("item_audit_report_limit")
-    report = json.loads(report_path.read_text(encoding="utf-8"))
     manifest_path, samples_path = archive_directory / "manifest.json", archive_directory / "hero_samples.jsonl"
     if (manifest_path.stat().st_size > 1024 ** 2 or samples_path.stat().st_size > 512 * 1024 ** 2
             or observations_path.stat().st_size > 128 * 1024 ** 2):
         raise ValueError("item_audit_source_size_limit")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    refuse_locked_match(manifest.get("match_id"))
+    refuse_locked_match(manifest.get("parsed_match_id"))
+    report = json.loads(report_path.read_text(encoding="utf-8"))
     source_paths = (report_path, observations_path, manifest_path, samples_path)
     signatures = {p: (p.stat().st_size, p.stat().st_mtime_ns) for p in source_paths}
     hashes = {p: digest(p) for p in source_paths}
