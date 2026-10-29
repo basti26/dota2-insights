@@ -81,6 +81,126 @@ class DraftDiagnosticsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'slot_identity'):
             DraftDiagnostics().add('events.jsonl', 1, event, {'line_sha256': 'a'*64})
 
+    def ready(self, stamp, candidates=False):
+        event = self.event()
+        event['written_at_utc'] = stamp
+        event['snapshot']['slots'][1]['conflict'] = False
+        if candidates:
+            event['advice'].update(stage='round_one', candidates=[{'hero_id': 'lina'}])
+        return event
+
+    def test_stage_wait_generation_and_later_widget_are_separate(self):
+        diag = DraftDiagnostics()
+        wait = self.ready('2026-10-26T12:00:00Z')
+        first = self.ready('2026-10-26T12:00:02Z', True)
+        later = self.ready('2026-10-26T12:00:03Z', True)
+        later['snapshot']['revision'] += 1
+        for i, event in enumerate((wait, first, later), 1):
+            diag.add('events.jsonl', i, event, {'line_sha256': 'a'*64})
+        receipt = self.receipt(later)
+        receipt['presented_at_utc'] = '2026-10-26T12:00:03.125Z'
+        diag.add('ui-presented.jsonl', 1, receipt, {'line_sha256': 'b'*64})
+        stage = diag.result()['stage_timing']['stages'][0]
+        self.assertEqual(stage['recorded_eligibility_to_generation_ms'], 2000)
+        self.assertEqual(stage['recorded_eligibility_to_widget_ms'], 3125)
+        self.assertEqual(stage['widget_source_event_line'], 3)
+        self.assertEqual(stage['widget_relative_to_recorded_end'], 'unknown')
+
+    def test_end_event_cannot_prove_hide_and_late_receipt_is_exposed(self):
+        diag = DraftDiagnostics()
+        first = self.ready('2026-10-26T12:00:00Z', True)
+        end = copy.deepcopy(first)
+        end['snapshot']['phase'] = 'strategy'
+        end['written_at_utc'] = '2026-10-26T12:00:01Z'
+        diag.add('events.jsonl', 1, first, {'line_sha256': 'a'*64})
+        diag.add('events.jsonl', 2, end, {'line_sha256': 'a'*64})
+        receipt = self.receipt(first)
+        diag.add('ui-presented.jsonl', 1, receipt, {'line_sha256': 'b'*64})
+        report = diag.result()['stage_timing']
+        self.assertEqual(report['stages'][0]['widget_relative_to_recorded_end'], 'at_or_after')
+        self.assertTrue(report['stages'][0]['eligibility_and_generation_same_event'])
+        self.assertIsNone(report['stages'][0]['recorded_eligibility_to_generation_ms'])
+        self.assertFalse(report['end_widget_hidden_verified'])
+
+    def test_conflicts_unknown_side_and_missing_widget_do_not_become_zero(self):
+        for own_side in (None, 'left'):
+            event = self.event()
+            event['snapshot']['own_side'] = own_side
+            diag = DraftDiagnostics()
+            diag.add('events.jsonl', 1, event, {'line_sha256': 'a'*64})
+            stage = diag.result()['stage_timing']['stages'][0]
+            self.assertEqual(stage['status'], 'eligibility_not_observed')
+            self.assertIsNone(stage['recorded_eligibility_to_widget_ms'])
+
+    def test_stage_clock_regression_is_not_treated_as_latency(self):
+        diag = DraftDiagnostics()
+        for line, event in enumerate((self.ready('2026-10-26T12:00:03Z'),
+                                      self.ready('2026-10-26T12:00:02Z'),
+                                      self.ready('2026-10-26T12:00:04Z', True)), 1):
+            diag.add('events.jsonl', line, event, {'line_sha256': 'a'*64})
+        stage = diag.result()['stage_timing']['stages'][0]
+        self.assertIsNone(stage['recorded_eligibility_to_generation_ms'])
+        self.assertEqual(stage['status'], 'generated_without_linked_widget_receipt')
+
+    def visibility(self, **values):
+        row = {'record_version': 1, 'session_id': 'a'*32, 'revision': 0, 'phase': 'selection',
+               'advice_stage': 'round_one', 'visible': True, 'expanded': False, 'reason': 'shown',
+               'display_mode': 'bp', 'observed_at_utc': '2026-10-26T12:00:01Z',
+               'written_at_utc': '2026-10-26T12:00:01.1Z'}
+        return {**row, **values}
+
+    def test_visibility_flags_are_separate_from_application_and_OS_truth(self):
+        diag = DraftDiagnostics()
+        for line, row in enumerate((self.visibility(), self.visibility(visible=False, reason='outside_draft',
+                                                                       phase='strategy', display_mode='laning')), 1):
+            diag.add('panel-visibility.jsonl', line, row, {'line_sha256': str(line)*64})
+        result = diag.result()
+        flags = result['panel_visibility_evidence']
+        self.assertEqual(flags['valid_rows'], 2)
+        self.assertFalse(flags['rows'][1]['visible'])
+        self.assertEqual(flags['rows'][0]['revision'], 0)
+        self.assertEqual(flags['recorded_reason_counts'], {'shown': 1, 'outside_draft': 1})
+        self.assertEqual(result['ui_application_evidence'], [])
+        self.assertFalse(result['stage_timing']['end_widget_hidden_verified'])
+        self.assertFalse(flags['os_visibility_verified'])
+
+    def test_legacy_mode_is_unknown_content_and_laning_is_not_BP(self):
+        diag = DraftDiagnostics()
+        legacy = self.visibility(phase='strategy'); legacy.pop('display_mode')
+        for line, row in enumerate((legacy, self.visibility(phase='strategy', display_mode='laning'),
+                                    self.visibility(phase='strategy')), 1):
+            diag.add('panel-visibility.jsonl', line, row, {'line_sha256': 'a'*64})
+        flags = diag.result()['panel_visibility_evidence']
+        self.assertEqual(flags['legacy_missing_mode_rows'], 1)
+        self.assertEqual(flags['end_phase_explicit_bp_shown_lines'], [3])
+        self.assertEqual(flags['explicit_mode_counts'], {'laning': 1, 'bp': 1})
+
+    def test_bad_visibility_rows_do_not_become_hidden_or_healthy(self):
+        diag = DraftDiagnostics()
+        bad = ({'visible': 1}, {'visible': False}, {'record_version': True},
+               {'observed_at_utc': '2026-10-26T12:00:02Z'}, {'written_at_utc': '2026-10-26T12:00:01'},
+               {'display_mode': 'unknown'}, {'revision': True})
+        for line, values in enumerate(bad, 1):
+            diag.add('panel-visibility.jsonl', line, self.visibility(**values), {'line_sha256': 'a'*64})
+        flags = diag.result()['panel_visibility_evidence']
+        self.assertEqual(flags['invalid_rows'], len(bad))
+        self.assertEqual(flags['valid_rows'], 0)
+        self.assertEqual(flags['recorded_reason_counts'], {})
+
+    def test_absent_empty_and_not_declared_streams_are_distinct(self):
+        diag = DraftDiagnostics()
+        self.assertIsNone(diag.result()['panel_visibility_evidence']['stream_present'])
+        self.assertFalse(diag.result(available_streams=[])['panel_visibility_evidence']['stream_present'])
+        flags = diag.result(available_streams=['panel-visibility.jsonl'])['panel_visibility_evidence']
+        self.assertTrue(flags['stream_present'])
+        self.assertEqual(flags['valid_rows'], 0)
+
+    def test_finished_is_a_recorded_terminal_phase(self):
+        diag = DraftDiagnostics()
+        event = self.event(); event['snapshot']['phase'] = 'finished'
+        diag.add('events.jsonl', 1, event, {'line_sha256': 'a'*64})
+        self.assertEqual(diag.result()['stage_timing']['first_recorded_end_phase'], 'finished')
+
 
 if __name__ == '__main__':
     unittest.main()

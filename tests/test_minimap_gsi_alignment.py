@@ -50,6 +50,34 @@ class AlignmentTests(unittest.TestCase):
         self.assertTrue(item['position_evidence_usable'])
         self.assertFalse(result['calibration_verified'])
         self.assertFalse(item['pixel_identity_verified'])
+        scope = result['native_scope_selection'][0]
+        self.assertEqual(scope['lookup_status'], 'matching_packages_verified')
+        self.assertEqual(scope['wanted_distinct_source_ids'], 1)
+        self.assertEqual(scope['verified_native_package_ids'], result['native_package_ids'])
+
+    def test_unselected_scope_is_not_called_missing_source_record(self):
+        a, b = self.publish()
+        result = prepare(a, [], self.n.roots)
+        scope = result['native_scope_selection'][0]
+        self.assertEqual(scope['lookup_status'], 'scope_not_in_selected_index')
+        self.assertEqual(scope['frame_rows'], 1)
+        self.assertEqual(scope['verified_native_package_ids'], [])
+        self.assertNotEqual(result['samples'][0]['source_record_status'], 'exact_recorded_source_id')
+
+    def test_not_ready_metadata_does_not_open_body_or_verify_package(self):
+        a, b = self.publish()
+        b[0]['state'] = 'source_error'
+        b[0]['source'] = 'not/a/valid/path'
+        scope = prepare(a, b, self.n.roots)['native_scope_selection'][0]
+        self.assertEqual(scope['lookup_status'], 'matching_index_entries_not_ready')
+        self.assertEqual(scope['indexed_not_ready_entries'], 1)
+        self.assertEqual(scope['verified_native_package_ids'], [])
+
+    def test_verified_scope_does_not_imply_individual_source_ID_exists(self):
+        self.n.fixture.rows[0]['gsi_source_id'] = 'gsi_'+'e'*32
+        result = self.result()
+        self.assertEqual(result['native_scope_selection'][0]['lookup_status'], 'matching_packages_verified')
+        self.assertEqual(result['samples'][0]['source_record_status'], 'unknown')
 
     def test_timestamp_alone_or_other_session_never_matches(self):
         for case in ('no_token', 'other_session', 'other_token'):
@@ -125,6 +153,8 @@ class AlignmentTests(unittest.TestCase):
         self.assertNotIn('samples', summary)
         self.assertFalse(summary['calibration_verified'])
         self.assertIn('来源覆盖，不是识别准确率', (folder/'REPORT.md').read_text(encoding='utf-8'))
+        self.assertEqual(summary['native_scope_selection'][0]['lookup_status'], 'matching_packages_verified')
+        self.assertIn('匹配范围包已核验', (folder/'REPORT.md').read_text(encoding='utf-8'))
 
     def test_daily_report_old_context_and_missing_index_remain_distinct(self):
         from tools.review_recordings import run

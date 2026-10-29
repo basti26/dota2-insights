@@ -97,6 +97,24 @@ class DraftPhaseTests(unittest.TestCase):
         self.assertNotIn('ui-presented.jsonl', result['stream_rows'])
         self.assertIn('ui-presented.jsonl', result['missing_at_cutoff'])
 
+    def test_visibility_prefix_is_reviewed_without_reading_later_tail(self):
+        row = {'record_version': 1, 'session_id': self.sid, 'revision': 0, 'phase': 'selection',
+               'advice_stage': 'round_one', 'visible': True, 'expanded': True, 'reason': 'shown',
+               'observed_at_utc': '2026-10-26T00:00:00Z', 'written_at_utc': '2026-10-26T00:00:00.1Z',
+               'display_mode': 'bp'}
+        raw = (json.dumps(row)+'\n').encode()
+        path = self.folder/'panel-visibility.jsonl'
+        path.write_bytes(raw+b'not JSON after cutoff')
+        self.manifest['prefixes'].append({'file': path.name, 'bytes': len(raw), 'rows': 1,
+                                         'sha256': hashlib.sha256(raw).hexdigest()})
+        self.manifest['missing_at_cutoff'].remove(path.name)
+        self.write_manifest()
+        flags = review(self.root, self.sid)['diagnostics']['panel_visibility_evidence']
+        self.assertTrue(flags['stream_present'])
+        self.assertEqual(flags['valid_rows'], 1)
+        self.assertEqual(flags['rows'][0]['line_sha256'], hashlib.sha256(raw).hexdigest())
+        self.assertFalse(flags['recommendation_application_verified'])
+
     def test_calculated_advice_and_ui_application_receipts_are_not_conflated(self):
         self.receipt['view_input'] = {'snapshot': {'session_id': self.sid, 'match_id': '12345', 'phase': 'strategy'},
                                       'advice': {'candidates': [{'hero_id': 'npc_dota_hero_axe'}]}}

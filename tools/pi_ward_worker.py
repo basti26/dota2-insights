@@ -2,14 +2,57 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import subprocess
 import sys
 import time
 import uuid
+
+
+def failure_summary(output, expected_match_id, exitcode):
+    """Bounded diagnostic metadata only; never promote a partial export."""
+    result={'diagnostic_only':True,'eligible_for_analysis':False,'process_exitcode':exitcode,
+            'manifest_status':'not_read_process_nonterminal' if exitcode is None else 'unavailable'}
+    if exitcode is None:
+        return result
+    path=Path(output)/'manifest.json'
+    try:
+        if path.is_symlink():return result
+        with path.open('rb') as stream:raw=stream.read(262145)
+        if len(raw)>262144:
+            result['manifest_status']='oversized';return result
+        manifest=json.loads(raw)
+        if not isinstance(manifest,dict):raise ValueError('not_object')
+        identifier=manifest.get('match_id')
+        if identifier!=expected_match_id:
+            result['manifest_status']='identity_conflict';return result
+        result.update(manifest_status='metadata_read',manifest_sha256=hashlib.sha256(raw).hexdigest())
+        for key in ('parse_error','stop_reason'):
+            value=manifest.get(key)
+            result[key]=value if isinstance(value,str) and re.fullmatch('[A-Za-z_][A-Za-z0-9_]{0,79}',value) else None
+        for key in ('complete','independent_footer_matches_parser'):
+            value=manifest.get(key);result[key]=value if type(value) is bool else None
+        tick=manifest.get('last_tick')
+        result['last_tick']=tick if type(tick) is int and 0<=tick<2**32 else None
+        parsed=manifest.get('parsed_match_id')
+        valid=lambda value:isinstance(value,str) and re.fullmatch('[1-9][0-9]{0,19}',value) is not None
+        result['parsed_match_id']=parsed if valid(parsed) else None
+        result['parsed_match_id_matches_only_low32']=(parsed!=expected_match_id and int(parsed)==(int(expected_match_id)&0xffffffff)
+            if valid(parsed) and valid(expected_match_id) else None)
+        packets=manifest.get('failure_packet_diagnostics')
+        if isinstance(packets,list) and len(packets)<=1:
+            from dota2_insights.replay_packet_diagnostics import public_summary
+            result['failure_packet_diagnostics']=[summary for value in packets
+                if (summary:=public_summary(value)) is not None]
+        result['meaning']='metadata_diagnostic_not_a_parser_repair_or_identity_override'
+    except (OSError,ValueError,TypeError):
+        result['manifest_status']='unreadable'
+    return result
 
 
 def process_one(store):
@@ -67,9 +110,10 @@ def process_one(store):
             return {'status':'processed',**result}
         except Exception as exc:
             reason=str(exc) if isinstance(exc,ValueError) else type(exc).__name__
-            store.update(identifier,analysis_status='partial_or_failed',reason=reason,analysis_location='pi')
+            detail=failure_summary(output,identifier,process.poll() if process is not None else None)
+            store.update(identifier,analysis_status='partial_or_failed',reason=reason,analysis_location='pi',analysis_failure=detail)
             atomic(store.root/'worker_status.json',{'at_utc':utc(),'status':'partial_or_failed',
-                'match_id':identifier,'reason':reason})
+                'match_id':identifier,'reason':reason,'analysis_failure':detail})
             return {'status':'processed','match_id':identifier,'analysis_status':'partial_or_failed','reason':reason}
         finally:
             if process is not None and process.poll() is None:

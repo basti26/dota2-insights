@@ -14,6 +14,75 @@ from tools.review_recordings import run
 
 
 class NativeItemReviewTests(unittest.TestCase):
+    def continuity_rows(self):
+        first = deepcopy(self.f.row)
+        first['attempt']['hero']['slots'][0].update(status='known', item_id='blink', candidate='blink')
+        second = deepcopy(first)
+        second['captured_at_utc'] = second['attempt']['captured_at_utc'] = '2026-10-26T00:00:01Z'
+        second['attempt']['hero']['slots'][0].update(status='unknown', item_id=None, candidate=None)
+        third = deepcopy(first)
+        third['captured_at_utc'] = third['attempt']['captured_at_utc'] = '2026-10-26T00:00:02Z'
+        raw = b''.join((json.dumps(r) + '\n').encode() for r in (first, second, third))
+        self.f.write_payload(raw)
+        self.f.manifest['accepted_observations_at_cutoff'] = 3
+        self.f.manifest['payload']['rows'] = 3
+        self.f.write_manifest()
+
+    def test_continuity_cli_prepares_unknown_without_candidate_and_recovery(self):
+        self.continuity_rows()
+        path, _, _ = self.report()
+        result = prepare_report(path, root=self.project, roots=self.roots, continuity=True)
+        self.assertEqual(result['prepared'], 4)
+        page = next(Path(result['output']).glob('continuity-*/index.html'))
+        receipt = json.loads(page.with_name('evidence.json').read_text(encoding='utf8'))
+        self.assertEqual({r['role'] for r in receipt['entries']},
+                         {'known', 'first_unknown', 'last_unknown', 'next_known'})
+        self.assertTrue(receipt['continuity']['episodes'][0]['next_known_same_item'])
+        self.assertIsNone(next(r for r in receipt['entries'] if r['role']=='first_unknown')['candidate'])
+        for r in receipt['entries']:
+            with Image.open(page.parent / r['image']) as crop:
+                self.assertEqual(crop.getpixel((0, 0)), (0, 0, 255))
+        self.assertIn('屏幕实际显示未核验', page.read_text(encoding='utf8'))
+
+    def test_continuity_recomputes_events_instead_of_trusting_edited_report(self):
+        self.continuity_rows()
+        path, _, _ = self.report()
+        report = json.loads(path.read_text(encoding='utf8'))
+        report['equipment_reports'][0]['equipment_continuity']['episodes'][0]['last_known_item'] = 'rapier'
+        path.write_text(json.dumps(report), encoding='utf8')
+        result = prepare_report(path, root=self.project, roots=self.roots, continuity=True)
+        receipt = json.loads(next(Path(result['output']).glob('continuity-*/evidence.json')).read_text(encoding='utf8'))
+        self.assertEqual(receipt['continuity']['episodes'][0]['last_known_item'], 'blink')
+
+    def test_continuity_wrong_image_sha_is_unavailable_not_successful_crop(self):
+        self.continuity_rows()
+        path, _, _ = self.report()
+        self.image.write_bytes(b'changed')
+        result = prepare_report(path, root=self.project, roots=self.roots, continuity=True)
+        self.assertEqual(result['prepared'], 0)
+        self.assertEqual(result['unavailable'], 4)
+
+    def test_continuity_source_changes_during_crop_publish_no_success_receipt(self):
+        from unittest.mock import patch
+        from dota2_insights.equipment_continuity_evidence import prepare
+        from dota2_insights.item_review_evidence import slot_crop
+        self.continuity_rows()
+        _, _, entry = self.report()
+        output = self.project / 'diagnostics/continuity-changed'
+        changed = False
+        def mutate(*args):
+            nonlocal changed
+            result = slot_crop(*args)
+            if not changed:
+                changed = True
+                self.f.source.write_bytes(self.f.source.read_bytes() + b'\n')
+            return result
+        with patch('dota2_insights.equipment_continuity_evidence.slot_crop', side_effect=mutate):
+            with self.assertRaises(ValueError):
+                prepare(entry, self.roots, {'blink': {'cost': 2250}}, output)
+        self.assertFalse((output / 'evidence.json').exists())
+        self.assertFalse((output / 'index.html').exists())
+
     def setUp(self):
         from test_observation_index import EquipmentIndexTests
         self.index_fixture = EquipmentIndexTests()

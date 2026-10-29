@@ -147,13 +147,16 @@ def open_rows(root, session, *, expected_package_id=None, with_evidence=False):
 def review(root, session, *, expected_package_id=None, source_reference=None, catalogue=None, catalogue_source=None):
     from collections import Counter
     from .item_review_priorities import ItemReviewPriorities
+    from .equipment_continuity import EquipmentContinuity
     from .observation_index import journal_reference
     statuses, heroes, slots = Counter(), Counter(), Counter()
     priorities = ItemReviewPriorities(catalogue)
+    continuity = EquipmentContinuity(catalogue)
     accepted = 0
     with open_rows(root, session, expected_package_id=expected_package_id, with_evidence=True) as (manifest, rows):
         ref = journal_reference(source_reference, manifest) if source_reference is not None else None
         for _, row, evidence in rows:
+            continuity.add(row, {**evidence, **({'source': ref} if ref is not None else {})})
             if ref is not None:
                 priorities.add(manifest['match_id'], row, {**evidence, 'source': ref})
             attempt = row['attempt']
@@ -175,6 +178,7 @@ def review(root, session, *, expected_package_id=None, source_reference=None, ca
             'slot_status_counts': dict(slots), 'accepted_observation_rows': accepted,
             'item_review_priorities': priorities.result(), 'priority_queue_limit_reached': priorities.at_capacity,
             'catalogue_source': catalogue_source,
+            'equipment_continuity': continuity.result(),
             'priority_inputs_available': source_reference is not None and catalogue is not None,
             'images_verified': False, 'accuracy_verified': False,
             'source_verified_before_and_after': True, 'other_channels': 'not_closed_by_this_manifest'}
@@ -192,6 +196,23 @@ def render_markdown(reports, skipped, *, index_state):
             f"英雄观测行：{report['hero_observation_counts']}",
             f"格状态日志计数：{report['slot_status_counts']}",
             '其他通道未由本清单封存，没有认证实际英雄/物品图像。', '']
+        continuity = report.get('equipment_continuity', {})
+        lines += ['#### 大件识别中断复查', '',
+            f"目录可用：{continuity.get('catalogue_available', False)}；状态变化计数：{continuity.get('counts', {})}。",
+            '以下仅为同英雄同格的日志变化；不能推断装备真值、漏算金额或屏幕实际显示。', '']
+        for event in continuity.get('episodes', []):
+            known, lost = event['known'], event['first_unknown']
+            recovered = event['next_known']
+            select = lost['economy_selection']
+            selection = (f"记录选择值 {select.get('selected_value')} / 当前原观测 {select.get('current_observed_value')}"
+                         if select is not None else '此行未记录经济选择，实际显示未知')
+            end = (f"后续known行 {recovered['evidence']['line']}，同物品ID：{event['next_known_same_item']}"
+                   if recovered else '限定窗口内未见下一条known')
+            lines.append(f"- {event['hero_id']} / {event['slot_id']} / {event['last_known_item']}："
+                         f"known行 {known['evidence']['line']} → unknown行 {lost['evidence']['line']}"
+                         f"（{lost['captured_at_utc']}，候选 {lost['candidate']}，{event['unknown_rows']}行）；"
+                         f"{selection}；{end}。")
+        lines.append('')
     for entry in skipped:
         lines.append(f"- 未分析：{entry.get('state', 'unknown')} / {entry.get('reason', '未通过交接')}")
     return '\n'.join(lines) + '\n'

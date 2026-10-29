@@ -188,7 +188,7 @@ def review(root, session, *, expected_package_id=None, expected_binding_package_
                 if phase == 'selection' and isinstance((view.get('advice') or {}).get('candidates'), list) and view['advice']['candidates']:
                     ui_candidates += 1
     present = {spec['file'] for spec in manifest['prefixes']}
-    return {'session_id': session, 'diagnostics': diagnostics.result(), 'match_id_at_cutoff': manifest['match_id_at_cutoff'],
+    return {'session_id': session, 'diagnostics': diagnostics.result(available_streams=present), 'match_id_at_cutoff': manifest['match_id_at_cutoff'],
         'cutoff_recorded_at_utc': manifest['cutoff_recorded_at_utc'],
         'last_observed_at_utc': manifest['last_observed_at_utc'],
         'effective_match_id': manifest['effective_match_id'], 'binding_package_id': manifest['binding_package_id'],

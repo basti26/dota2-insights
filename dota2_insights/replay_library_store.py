@@ -208,7 +208,7 @@ class Store:
         catalog=self.catalog()['matches']
         # Personal replays are retained separately and never consume the pro quota.
         verified=sum(r.get('download_status')=='verified' and 'd2pt' in r.get('sources',[])
-                     and 'own' not in r.get('sources',[]) for r in catalog.values())
+                     and 'own' not in r.get('sources',[]) and 'tier1' not in r.get('sources',[]) for r in catalog.values())
         return verified,limit
 
     @contextmanager
@@ -231,11 +231,11 @@ class Store:
             data['updated_at_utc'] = utc()
             atomic(self.root/'catalog.json',data)
 
-    def reserve(self, expected_bytes):
+    def reserve(self, expected_bytes, *, unlimited=False):
         budget = int(self.config.get('storage_limit_gib',12))*1024**3
         used = sum(p.stat().st_size for p in self.replays.glob('*.dem'))
         free = shutil.disk_usage(self.root).free
-        if used+expected_bytes > budget or free-expected_bytes < 4*1024**3:
+        if (not unlimited and used+expected_bytes > budget) or free-expected_bytes < 4*1024**3:
             raise ValueError('archive_storage_reserve')
 
     def commit(self, temporary, identifier, source, expected_sha=None, details=None):
@@ -252,7 +252,7 @@ class Store:
                 temporary.unlink()
             else:
                 if source=='d2pt' and self.capacity()[0]>=self.capacity()[1]:raise ValueError('replay_limit_reached')
-                self.reserve(value['bytes'])
+                self.reserve(value['bytes'], unlimited=source=='tier1')
                 os.replace(temporary,target)
             row.update(value,download_status='verified',analysis_status=row.get('analysis_status','pending'),
                        archived_at_utc=utc())
@@ -329,6 +329,7 @@ class Store:
         valid=[w for w in wards if not w.get('after_match_end')]
         fast=sum(w.get('end_kind')=='killed' and w.get('duration_s') is not None and 0<=w['duration_s']<=60 for w in valid)
         self.update(identifier,analysis_status='complete',ward_count=len(wards),ward_counts=summary,
+                    reason=None,http_status=None,retry_after_epoch=None,analysis_failure=None,
                     analyzed_at_utc=utc(),analysis_sha256=sha(folder/'wards.json'),
                     postgame_context_status='complete' if context_bytes is not None else 'not_requested',
                     postgame_context_sha256=hashlib.sha256(context_bytes).hexdigest() if context_bytes is not None else None,
@@ -365,9 +366,11 @@ def valve_url(url, identifier):
     return url
 
 
-def download(store, identifier, url, details):
+def download(store, identifier, url, details, *, source='d2pt'):
+    if source not in ('d2pt', 'tier1'):
+        raise ValueError('invalid_download_source')
     identifier=mid(identifier);valve_url(url,identifier)
-    store.reserve(MAX_DEM+MAX_WIRE)
+    store.reserve(MAX_DEM+MAX_WIRE, unlimited=source=='tier1')
     wire=store.root/'incoming'/(identifier+'.'+uuid.uuid4().hex+'.compressed.part')
     temporary=wire.with_name(wire.name+'.dem')
     began=time.monotonic()
@@ -406,9 +409,9 @@ def download(store, identifier, url, details):
                 if total>MAX_DEM or time.monotonic()-began>360:raise ValueError('expanded_resource_limit')
                 out.write(block)
         if process is not None and process.wait(timeout=5)!=0:raise ValueError('zstd_decode_failed')
-        result=store.commit(temporary,identifier,'d2pt',details=details)
+        result=store.commit(temporary,identifier,source,details=details)
         atomic(store.root/'receipts'/f'{identifier}-download.json',
-               {**result,'source':'dota2protracker_public_list_then_opendota_valve','wire_bytes':received,'at_utc':utc()})
+               {**result,'source':('liquipedia_tier1_opendota_valve' if source=='tier1' else 'dota2protracker_public_list_then_opendota_valve'),'wire_bytes':received,'at_utc':utc()})
         return result
     finally:
         if process is not None and process.poll() is None:
@@ -425,7 +428,7 @@ def collect(store, count, seed=None, prepared=None):
         count=min(count,limit-current)
         existing=store.catalog()['matches']
         today=datetime.now(timezone.utc).date().isoformat()
-        attempts=sum(r.get('sampled_at_utc','').startswith(today) for r in existing.values())
+        attempts=sum(r.get('sampled_at_utc','').startswith(today) and 'd2pt' in r.get('sources',[]) for r in existing.values())
         budget=max(0,int(store.config.get('pro_daily_limit',3))-attempts)
         if not budget:return {'status':'daily_limit','attempts':attempts}
         if prepared is None:
@@ -470,7 +473,7 @@ def collect(store, count, seed=None, prepared=None):
                 url=data.get('replay_url')
                 if not url:raise ValueError('public_replay_address_unavailable')
                 download(store,identifier,url,{**candidate,'seed':seed})
-                store.update(identifier,analysis_status='pending')
+                store.update(identifier,analysis_status='pending',reason=None,http_status=None,retry_after_epoch=None)
                 results.append({'match_id':identifier,'status':'verified'})
             except Exception as exc:
                 reason=str(exc) if isinstance(exc,ValueError) and re.fullmatch('[a-z_]{1,80}',str(exc)) else type(exc).__name__
@@ -491,6 +494,7 @@ def public_catalog(store):
     for row in data['matches'].values():
         out={k:v for k,v in row.items() if k in fields}
         out['mmr']=(row.get('sampling')or{}).get('mmr')
+        out['league_name']=(row.get('sampling')or{}).get('league_name')
         rows.append(out)
     current,limit=store.capacity()
     worker={}
@@ -502,6 +506,7 @@ def public_catalog(store):
             'replay_count':current,'replay_limit':limit,'downloads_stopped':current>=limit,
             'total_replay_count':sum(r.get('download_status')=='verified' for r in rows),
             'own_replay_count':sum(r.get('download_status')=='verified' and 'own' in r.get('sources',[]) for r in rows),
+            'tier1_replay_count':sum(r.get('download_status')=='verified' and 'tier1' in r.get('sources',[]) for r in rows),
             'analysis_location':'pi' if store.config.get('local_analysis') else 'windows',
             'postgame_context_enabled':store.config.get('postgame_context') is True,
             'worker':worker,
@@ -521,7 +526,7 @@ def ward_summary(store):
         counts=Counter(w['ward_type'] for w in rows)
         duration=manifest.get('match_end_game_time_s')
         quick=[w for w in rows if w.get('end_kind')=='killed' and w.get('duration_s') is not None and 0<=w['duration_s']<=60]
-        matches.append({'match_id':identifier,'source':'own' if 'own' in record['sources'] else 'd2pt',
+        matches.append({'match_id':identifier,'source':'own' if 'own' in record['sources'] else 'tier1' if 'tier1' in record['sources'] else 'd2pt',
             'mmr':(record.get('sampling')or{}).get('mmr'),'game_end_seconds':duration,
             'observer':counts['observer'],'sentry':counts['sentry'],
             'quick_killed_unverified_team':len(quick),
@@ -546,14 +551,14 @@ def summary_page(store):
         '<table><tr><th>比赛</th><th>来源</th><th>假眼</th><th>真眼</th><th>每10分钟假眼</th><th>60秒内被击杀</th><th>结束未知</th></tr>']
     for row in sorted(data['matches'],key=lambda r:int(r['match_id']),reverse=True):
         result.append('<tr><td><a href="'+row['match_id']+'/眼位报告.html">'+row['match_id']+'</a></td>'+''.join('<td>'+html.escape(str(v))+'</td>' for v in [
-            '本人' if row['source']=='own' else 'D2PT '+str(row['mmr']),row['observer'],row['sentry'],row['observer_per_10_minutes'],row['quick_killed_unverified_team'],row['unknown_end']])+'</tr>')
+            '本人' if row['source']=='own' else 'Tier 1 职业赛事' if row['source']=='tier1' else 'D2PT '+str(row['mmr']),row['observer'],row['sentry'],row['observer_per_10_minutes'],row['quick_killed_unverified_team'],row['unknown_end']])+'</tr>')
     return '\n'.join(result+['</table>'])
 
 
 PAGE='''<!doctype html><meta charset="utf-8"><title>Dota录像资料库</title>
 <style>body{background:#172127;color:#e4edf2;font:16px sans-serif;max-width:1100px;margin:24px auto;padding:12px}a{color:#8bd6b8}td,th{padding:10px;text-align:left;border-bottom:1px solid #35434b}table{width:100%;border-collapse:collapse}.note{color:#b4c1ca}</style>
 <h1>Dota录像资料库</h1><p class="note">本人录像与Dota2ProTracker随机高分局。眼位为赛后全知分析，未接入实战提示。</p><p><a href="/ward-summary">查看眼位汇总</a></p><p id="state">读取状态…</p><table><thead><tr><th>比赛</th><th>来源</th><th>分数</th><th>录像</th><th>眼位</th></tr></thead><tbody id="rows"></tbody></table>
-<script>async function refresh(){try{const d=await(await fetch('/api/catalog',{cache:'no-store'})).json();document.getElementById('state').textContent='高分局 '+d.replay_count+'/'+d.replay_limit+' · 本人 '+d.own_replay_count+' 盘（不占额度） · '+(d.downloads_stopped?'下载已停止':'继续收集')+' · '+(d.worker&&d.worker.status==='analyzing'?'Pi正在分析 '+d.worker.match_id+'，已用 '+Math.floor(d.worker.elapsed_seconds/60)+' 分钟':'等待下一项')+' · 空闲 '+(d.disk_free_bytes/1073741824).toFixed(1)+' GiB';const host=document.getElementById('rows');host.replaceChildren();for(const r of d.matches){const tr=document.createElement('tr');for(const value of [r.match_id,(r.sources||[]).includes('own')?'本人':'D2PT随机',r.mmr||'—',r.download_status+(r.reason?' · '+r.reason:'')]){const td=document.createElement('td');td.textContent=value;tr.append(td)}const td=document.createElement('td');if(r.analysis_status==='complete'){const a=document.createElement('a');a.href='/match/'+r.match_id;a.textContent=r.ward_count+'条 · 查看';td.append(a)}else td.textContent=r.analysis_status||'等待';tr.append(td);host.append(tr)}}catch(e){document.getElementById('state').textContent='暂时无法读取状态'}}refresh();setInterval(refresh,10000)</script>'''
+<script>async function refresh(){try{const d=await(await fetch('/api/catalog',{cache:'no-store'})).json();document.getElementById('state').textContent='高分局 '+d.replay_count+'/'+d.replay_limit+' · 本人 '+d.own_replay_count+' 盘 · Tier 1 '+d.tier1_replay_count+' 盘（本人/职业不占额度） · '+(d.downloads_stopped?'高分局采样已停':'高分局继续收集')+' · '+(d.worker&&d.worker.status==='analyzing'?'Pi正在分析 '+d.worker.match_id+'，已用 '+Math.floor(d.worker.elapsed_seconds/60)+' 分钟':'等待下一项')+' · 空闲 '+(d.disk_free_bytes/1073741824).toFixed(1)+' GiB';const host=document.getElementById('rows');host.replaceChildren();for(const r of d.matches){const tr=document.createElement('tr');for(const value of [r.match_id,(r.sources||[]).includes('own')?'本人':(r.sources||[]).includes('tier1')?'Tier 1 '+(r.league_name||''):'D2PT随机',r.mmr||'—',r.download_status+(r.reason?' · '+r.reason:'')]){const td=document.createElement('td');td.textContent=value;tr.append(td)}const td=document.createElement('td');if(r.analysis_status==='complete'){const a=document.createElement('a');a.href='/match/'+r.match_id;a.textContent=r.ward_count+'条 · 查看';td.append(a)}else td.textContent=r.analysis_status||'等待';tr.append(td);host.append(tr)}}catch(e){document.getElementById('state').textContent='暂时无法读取状态'}}refresh();setInterval(refresh,10000)</script>'''
 
 
 def ward_page(store, identifier):
@@ -629,6 +634,40 @@ def serve(store):
     ThreadingHTTPServer((host,int(store.config.get('port',8877))),Handler).serve_forever()
 
 
+def start_background_jobs(store, *, stop=None, startup_delay_s=30):
+    """Independent serial downloader and parser; parsing cannot block discovery."""
+    stop = stop if stop is not None else threading.Event()
+    def collector():
+        if stop.wait(startup_delay_s):return
+        while not stop.is_set():
+            try:
+                if store.config.get('tier1_enabled'):
+                    from dota2_insights.tier1_replays import collect_latest
+                    result=collect_latest(store)
+                else:
+                    result=collect(store,int(store.config.get('pro_daily_limit',3)))
+            except Exception as exc:
+                result={'error':type(exc).__name__,'http_status':getattr(exc,'code',None)}
+            atomic(store.root/'collector_status.json',{'at_utc':utc(),'result':result})
+            delay=60 if result.get('remaining_eligible',0)>0 else 600 if store.config.get('tier1_enabled') else 1800
+            if stop.wait(delay):return
+    def analyzer():
+        if stop.wait(startup_delay_s):return
+        from pi_ward_worker import process_one
+        while not stop.is_set():
+            try:
+                result=process_one(store)
+            except Exception as exc:
+                result={'status':'worker_error','error_type':type(exc).__name__}
+                atomic(store.root/'worker_status.json',{'at_utc':utc(),**result})
+            if result.get('status')!='processed' and stop.wait(10):return
+    threads=[threading.Thread(target=collector,name='replay-downloader',daemon=True)]
+    if store.config.get('local_analysis'):
+        threads.append(threading.Thread(target=analyzer,name='replay-analyzer',daemon=True))
+    for thread in threads:thread.start()
+    return threads
+
+
 def run(store):
     """User-owned boot daemon; one process, daily bounded collection, read-only HTTP."""
     with store.locked('daemon'):
@@ -636,21 +675,9 @@ def run(store):
             if row.get('analysis_status')=='analyzing':
                 store.update(identifier,analysis_status='partial_or_failed',reason='analysis_interrupted')
             if row.get('download_status')=='attempting':
-                store.update(identifier,download_status='manual_required',reason='download_interrupted')
-        def collector():
-            time.sleep(30)
-            while True:
-                try:
-                    if store.config.get('local_analysis'):
-                        from pi_ward_worker import process_one
-                        result=process_one(store)
-                        if result.get('status')=='processed':continue
-                    result=collect(store,1 if store.config.get('local_analysis') else int(store.config.get('pro_daily_limit',3)))
-                except Exception as exc:
-                    result={'error':type(exc).__name__}
-                atomic(store.root/'collector_status.json',{'at_utc':utc(),'result':result})
-                time.sleep(60 if store.config.get('local_analysis') and result.get('results') else 1800)
-        threading.Thread(target=collector,daemon=True).start()
+                store.update(identifier,download_status='waiting_retry' if 'tier1' in row.get('sources',[]) else 'manual_required',
+                             retry_after_epoch=time.time()+600,reason='download_interrupted')
+        start_background_jobs(store)
         while True:
             try:serve(store)
             except OSError:time.sleep(30)  # Address may not exist immediately at boot.
@@ -662,6 +689,7 @@ def main():
     commands=cli.add_subparsers(dest='command',required=True)
     commands.add_parser('catalog');commands.add_parser('serve');commands.add_parser('run')
     c=commands.add_parser('collect');c.add_argument('--count',type=int,default=3);c.add_argument('--prepared',type=Path)
+    commands.add_parser('collect-tier1')
     r=commands.add_parser('receive');r.add_argument('match_id');r.add_argument('--source',choices=('own','d2pt'),required=True);r.add_argument('--bytes',type=int,required=True);r.add_argument('--sha256',required=True)
     a=commands.add_parser('analysis');a.add_argument('match_id')
     a=commands.add_parser('export');a.add_argument('match_id')
@@ -670,12 +698,17 @@ def main():
     if args.command=='catalog':
         result=store.catalog();current,limit=store.capacity()
         result['runtime']={'local_analysis':bool(store.config.get('local_analysis')),
+            'tier1_enabled':store.config.get('tier1_enabled') is True,
+            'tier1_replay_count':sum(r.get('download_status')=='verified' and 'tier1' in r.get('sources',[]) for r in result['matches'].values()),
             'postgame_context_enabled':store.config.get('postgame_context') is True,
             'replay_count':current,'replay_limit':limit,'downloads_stopped':current>=limit,
             'quota_scope':'d2pt_excluding_own'}
     elif args.command=='serve':serve(store);return
     elif args.command=='run':run(store);return
     elif args.command=='collect':result=collect(store,args.count,prepared=json.loads(args.prepared.read_text())if args.prepared else None)
+    elif args.command=='collect-tier1':
+        from dota2_insights.tier1_replays import collect_latest
+        result=collect_latest(store)
     elif args.command=='receive':result=store.receive(args.match_id,args.source,args.bytes,args.sha256)
     elif args.command=='analysis':result=store.receive_analysis(args.match_id)
     elif args.command=='analysis-failed':

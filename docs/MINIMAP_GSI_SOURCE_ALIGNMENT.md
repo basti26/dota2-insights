@@ -31,6 +31,20 @@ python tools/prepare_minimap_gsi_alignment.py --run <32位小地图run编号> --
 
 日常tools/review_recordings.py已自动执行相同配对，联合REPORT.md/report.json的每个小地图run包含gsi_source_alignment摘要：样本数、已记录来源ID数、精确来源配对数、存活/新鲜/非暂停位置证据数及未配对原因。不把整份逐帧载荷重复塞入总报告；详细坐标仍用上述专门命令导出。原生GSI索引缺失单列missing_not_treated_as_zero，旧上下文无来源ID与未找到已选择原生记录分开，扫描窗口之外的包不冒充不存在。
 
+## 来源范围选择诊断（2026-10-29）
+
+按“最近N份”分别选择不同通道时，最近小地图run可能属于更早的比赛。零配对不能直接归因于GSI缺失或采样故障。新增`native_scope_selection`，逐个已知比赛/双会话列出涉及帧数、不同来源ID数及实际进入/退出核验的原生包：
+
+- scope_not_in_selected_index：本次索引没有选中对应范围，不证明源文件不存在。可显式扩大有界latest扫描，不按时间猜替代包。
+- matching_index_entries_not_ready：对应索引项未就绪，不读其正文或冒充已核验。
+- matching_packages_verified：匹配范围包已准入并退出复验；具体来源ID仍可能缺失、重复或内容不符，继续使用原逐行门禁，不因范围找到就强行配对。
+
+该摘要也进入日常JSON及中文报告。公开比赛号未知的上下文不生成可配对范围；同ID多帧仍按帧分别报告，不将涉及帧数、不同来源ID数或跨run数据当独立比赛数。
+
+实际同包对照：三个近期run共12010帧，原索引前三份未覆盖其中两个旧比赛。显式最多25份扫描后，两段分别得到1527/767帧精确来源配对、1278/698帧可用位置证据；另一段2937帧中的2936帧公开比赛号未知，扩大扫描也不能修复，保留本地身份。不是新采集或新独立验证集；匹配不到的来源可能与GSI日志采样省略有关，未认证具体原因。原始记录不回填、不提高生产频率。
+
+证据`diagnostics/minimap-scope-review-20261029/comparison.json`及`REPORT.md`保留两个索引SHA和同包两种范围结果；详细配对输出`diagnostics/minimap-gsi-alignment/20261028T215311045422Z/`。像素身份、图像文件与地图标定仍未因来源配对通过而认证，未启用实时预警。
+
 匹配键为公开比赛号、game_session_id、record_session_id、gsi_source_id四项完全一致。随后核对原provider UTC、比赛钟和游戏阶段；同ID存在多行时，即使坐标相同也报告source_id_ambiguous，不任选一条。缺记录、旧ID、空公开比赛号、身份不同或内容冲突保持未知；不同公开号/本地会话不自动回填。没有时间最近匹配或回溯猜测分支。
 
 生成前固定两个索引的包SHA，用原生open_rows和minimap_handoff.open_rows进入/退出复验；所有来源退出复验完成后才创建报告目录。report.json最后原子发布，REPORT.md没有独立完成语义。每行保留小地图原行SHA、原采集UTC/单调时钟、声明图片引用、来源包SHA及本人行号/sequence。

@@ -10,6 +10,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.prepare_replay_item_audit import bounded_rows, digest, game_guard
+from dota2_insights.replay_holdout import refuse_locked_match
+from dota2_insights.replay_economy_review import _item, _slot_number, _usable_slot
 
 LOOKBACK_S = 120.0
 CLASSES = {"image_vs_omniscient_stable_unresolved", "ward_entity_and_icon_semantics_pending"}
@@ -18,33 +20,47 @@ CLASSES = {"image_vs_omniscient_stable_unresolved", "ward_entity_and_icon_semant
 def compare_slots(original, reference):
     if reference is None:
         return {"status": "no_reference"}
-    inventory = {item["slot"]: item for item in reference["inventory"] if 0 <= item["slot"] <= 8}
+    reference_slots = [item for item in reference["inventory"]
+                       if type(item.get("slot")) is int and 0 <= item["slot"] <= 8]
+    inventory = {item["slot"]: item for item in reference_slots}
+    reference_counts = Counter(item["slot"] for item in reference_slots)
+    observed_counts = Counter(_slot_number(item) for item in original)
     pairs, observed, actual = [], Counter(), Counter()
     unknown = 0
     for item in original:
-        slot_id = item["slot_id"]
-        slot = int(slot_id[-1]) - 1 if slot_id.startswith("main_") else int(slot_id[-1]) + 5
-        if item["status"] not in ("known", "empty"):
+        slot = _slot_number(item)
+        key = _item(item.get("item_id"))
+        if (slot is None or observed_counts[slot] != 1
+                or not _usable_slot(item.get("status"), key, "known")):
             unknown += 1
             continue
         target = inventory.get(slot)
-        if target is None or target["status"] not in ("occupied", "empty"):
+        target_key = _item(target.get("item_key", target.get("item_name"))) if target else None
+        if reference_counts[slot] > 1:
+            status = "reference_duplicate_slot"
+        elif target is None or not _usable_slot(target.get("status"), target_key, "occupied"):
             status = "reference_unknown"
         elif item["status"] == "empty":
             status = "same" if target["status"] == "empty" else "different"
         else:
-            status = "same" if item["item_id"] == target.get("item_key") else "different"
+            status = "same" if target["status"] == "occupied" and key == target_key else "different"
         pairs.append({"slot": slot, "observed": item.get("item_id"),
                       "reference": target.get("item_key") if target else None, "status": status})
         if item["status"] == "known":
-            observed[item["item_id"]] += 1
+            observed[key] += 1
+    reference_complete = (len(reference_slots) == 9 and len(inventory) == 9
+        and all(_usable_slot(item.get("status"), _item(item.get("item_key", item.get("item_name"))), "occupied")
+                for item in inventory.values()))
     for item in inventory.values():
-        if item["status"] == "occupied":
-            actual[item["item_key"]] += 1
+        key = _item(item.get("item_key", item.get("item_name")))
+        if item["status"] == "occupied" and key is not None:
+            actual[key] += 1
+    complete = (len(original) == 9 and unknown == 0
+                and set(observed_counts) == set(range(9)) and reference_complete)
     return {"status": "compared_known_observed_slots", "observed_unknown_slots": unknown,
         "slot_counts": dict(Counter(pair["status"] for pair in pairs)), "slot_pairs": pairs,
-        "observed_known_items_subset_of_reference": not (observed - actual),
-        "all_9_slot_item_multisets_equal": observed == actual if unknown == 0 else None}
+        "observed_known_items_subset_of_reference": not (observed - actual) if reference_complete else None,
+        "all_9_slot_item_multisets_equal": observed == actual if complete else None}
 
 
 def analyze(review_path, archives):
@@ -52,20 +68,22 @@ def analyze(review_path, archives):
     review_path = Path(review_path)
     if review_path.stat().st_size > 16 * 1024 ** 2:
         raise ValueError("last_visible_review_size_limit")
-    review_hash = digest(review_path)
-    review = json.loads(review_path.read_text(encoding="utf-8"))
     archive_map = {}
     for directory in map(Path, archives):
         manifest_path = directory / "manifest.json"
         if manifest_path.stat().st_size > 1024 ** 2:
             raise ValueError("last_visible_manifest_size_limit")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        refuse_locked_match(manifest.get("match_id"))
+        refuse_locked_match(manifest.get("parsed_match_id"))
         if (manifest.get("parse_error") is not None or manifest.get("source_unchanged_stat") is not True
                 or manifest.get("truncated_at_tick") is not None or manifest.get("stop_reason") != "replay_eof"
                 or manifest.get("export_complete") is False
                 or manifest.get("parsed_match_id") != manifest.get("match_id")):
             raise ValueError("last_visible_successful_archive_required")
         archive_map[manifest["match_id"]] = directory, manifest, manifest_path
+    review_hash = digest(review_path)
+    review = json.loads(review_path.read_text(encoding="utf-8"))
     cases = []
     for case in review["cases"]:
         selected = [frame for frame in case["frames"] if frame["classification"] in CLASSES]

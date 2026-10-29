@@ -169,4 +169,16 @@ def render_markdown(reports, *, title='对局性能复核'):
                     f"{value(shown,'p99_frame_ms')} | {value(shown,'intervals_over_100_ms')} |")
         for item in report['unavailable']:
             lines.append(f"\n{report['launcher_run_id']}：{item['reason']}（未验证，不按零FPS处理）。")
+    lines += ['', '## 合格范围内的长帧样例', '',
+        '每次按比赛范围解析最多保留5条CSV数据行，按该行最大有效间隔排序；提交/显示保留各自区间，不相加成卡顿次数。',
+        '仅原生QPC，不按UTC拼接识别/音频工作负载，不归因助手；范围边界以外仍未知。', '',
+        '| 比赛/本地会话 | CSV数据行 | 流(PID/交换链) | 提交/显示区间(ms) | 原生QPC区间 |',
+        '|---|---:|---|---|---|']
+    for report in reports:
+        for game in report['matches']:
+            for example in (game.get('streams') or {}).get('long_interval_examples', []):
+                durations = '; '.join(f"{x['metric']}={x['interval_ms']:.3f}" for x in example['intervals'])
+                clocks = '; '.join(f"{x['metric']}:{x['qpc_start']:.3f}—{x['qpc_end']:.3f}" for x in example['intervals'])
+                lines.append(f"| {game.get('match_id') or game.get('game_session_id', '未知')} | {example['csv_data_row']} | "
+                             f"{example['process_id']}/{example['swap_chain']} | {durations} | {clocks} |")
     return '\n'.join(lines) + '\n'

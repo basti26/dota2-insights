@@ -17,6 +17,7 @@ def generate(root=ROOT, *, roots=None):
     from dota2_insights.performance_review import review as review_performance, render_markdown as render_performance
     from dota2_insights.audio_integrity_review import review as review_audio, render_markdown as render_audio
     from dota2_insights.draft_diagnostics import render_markdown as render_bp_diagnostics
+    from dota2_insights.draft_advice_audit import render_markdown as render_advice_audit
     from dota2_insights.gsi_evidence_census import render_markdown as render_gsi_census
     root = Path(root).resolve()
     roots = roots if roots is not None else history_roots(root/'config/history.local.json')
@@ -261,6 +262,8 @@ def generate(root=ROOT, *, roots=None):
                     if game['match_id'] is not None and all(gsi[key] == game[key] for key in
                         ('match_id','game_session_id','record_session_id'))])
             performance_match_reports.append(result)
+    from dota2_insights.ward_camera_review import discover_and_review as review_ward_camera, render_markdown as render_ward_camera
+    ward_camera = review_ward_camera(roots, latest=5)
     # Only write once all selected sources have passed their after-analysis check.
     output = checked_output(root, root/'diagnostics/record-content'/
         datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
@@ -273,7 +276,7 @@ def generate(root=ROOT, *, roots=None):
         'minimap_run_reports':minimap_reports, 'minimap_run_skipped':minimap_skipped, 'minimap_run_index_state':minimap_state,
         'audio_match_reports':audio_match_reports,'audio_match_skipped':audio_match_skipped,'audio_match_index_state':audio_match_state,
         'performance_match_reports':performance_match_reports,'performance_match_skipped':performance_match_skipped,
-        'performance_match_index_state':performance_match_state},
+        'performance_match_index_state':performance_match_state, 'ward_camera':ward_camera},
         ensure_ascii=False,indent=2,allow_nan=False),encoding='utf-8')
     (output/'REPORT.md').write_text(render_markdown(reports)
         + render_native(native_reports, native_skipped, index_state=native_state)
@@ -283,8 +286,10 @@ def generate(root=ROOT, *, roots=None):
         + '\n' + render_performance(performance_reports) + render_audio(audio_reports)
         + render_audio_match(audio_match_reports,audio_match_skipped,index_state=audio_match_state)
         + render_performance_match(performance_match_reports,performance_match_skipped,index_state=performance_match_state)
-        + render_bp_diagnostics(bp_reports) + render_gsi_census(native_reports),encoding='utf-8')
+        + render_bp_diagnostics(bp_reports) + render_advice_audit(bp_reports)
+        + render_gsi_census(native_reports) + render_ward_camera(ward_camera),encoding='utf-8')
     return {'report':str(output/'REPORT.md'),'runs_reviewed':len(reports),
+            'ward_camera_runs_reviewed':len(ward_camera['reports']),
             'performance_game_scopes_reviewed': sum(len(r['matches']) for r in performance_reports),
             'performance_match_scopes_reviewed':len(performance_match_reports),
             'performance_match_skipped':performance_match_skipped, 'performance_match_index_state':performance_match_state,

@@ -15,6 +15,12 @@ import time
 ROOT = Path(os.environ.get('DOTA2_REPLAY_RUNTIME',Path(__file__).resolve().parents[1]))
 
 
+def terminal_status(stop, error, parser_error):
+    if parser_error is not None and stop == 'replay_eof':
+        return 'parser_stream_error', error or type(parser_error).__name__
+    return stop, error
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('source', type=Path)
@@ -61,6 +67,9 @@ def main():
     source_sha = sha256_file(source)
     args.output.mkdir(parents=True)
     parser = ReplayParser(source)
+    from gem.errors import ReplayDataError
+    from dota2_insights import replay_packet_diagnostics
+    failure_packets = replay_packet_diagnostics.attach(parser, ReplayDataError)
     extractor = WardsExtractor()
     extractor.attach(parser)
     context_collector=None
@@ -101,6 +110,7 @@ def main():
         stop = 'postgame_context_limit'
     except Exception as exc:
         stop, error = 'parser_or_adapter_error', type(exc).__name__
+    stop, error = terminal_status(stop, error, parser.parse_error)
     wards = extractor.finalize()
     clock = parser.game_clock
     match_end_tick = parser.post_game_tick
@@ -136,6 +146,8 @@ def main():
         'parser_sha256': sha256_file(Path(parser_module.__file__)),
         'ward_extractor_sha256': sha256_file(Path(wards_module.__file__)),
         'adapter_sha256': sha256_file(Path(__file__)), 'stop_reason': stop, 'parse_error': parse_error,
+        'failure_packet_diagnostics': failure_packets,
+        'packet_diagnostics_sha256': sha256_file(Path(replay_packet_diagnostics.__file__)),
         'last_tick': parser.tick, 'match_end_game_time_s': match_end, 'game_clock': asdict(clock),
         'elapsed_seconds': round(time.monotonic()-began, 3), 'below_normal_priority': priority,
         'ward_count': len(rows), 'counts_by_team_type': dict(Counter(f"{r['team']}:{r['ward_type']}" for r in rows)),

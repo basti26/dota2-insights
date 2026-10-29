@@ -10,6 +10,9 @@ import math
 from pathlib import Path
 import re
 import sqlite3
+from urllib.parse import urlsplit
+
+from .replay_holdout import refuse_locked_match
 
 VERSION = 'postgame_facts_v1'
 HEX = re.compile(r'[a-f0-9]{64}')
@@ -31,6 +34,32 @@ def mid(value):
     if not isinstance(value, str) or not re.fullmatch(r'[1-9][0-9]{0,19}', value):
         raise ValueError('postgame_match_id_invalid')
     return value
+
+
+def source_category(catalog):
+    """Retain overlapping origins, but never silently label Tier 1 as D2PT."""
+    origin = catalog.get('sources')
+    if (not isinstance(origin, list) or not origin
+            or any(not isinstance(s, str) or s not in ('own', 'd2pt', 'tier1') for s in origin)
+            or len(set(origin)) != len(origin)):
+        raise ValueError('postgame_origin_invalid')
+    competition = None
+    if 'tier1' in origin:
+        sample = catalog.get('sampling')
+        if not isinstance(sample, dict):
+            raise ValueError('postgame_tier1_classification_required')
+        lid, tier, name, url = (sample.get(k) for k in ('league_id', 'tier', 'league_name', 'liquipedia_url'))
+        if (type(lid) is not int or lid <= 0 or type(tier) is not int or tier != 1
+                or not isinstance(name, str) or not name.strip() or len(name) > 200
+                or not isinstance(url, str) or len(url) > 1024):
+            raise ValueError('postgame_tier1_classification_required')
+        parsed = urlsplit(url)
+        if (parsed.scheme != 'https' or parsed.netloc != 'liquipedia.net'
+                or not parsed.path.startswith('/dota2/') or parsed.query or parsed.fragment):
+            raise ValueError('postgame_tier1_classification_required')
+        competition = {'league_id': lid, 'tier': tier, 'league_name': name, 'liquipedia_url': url}
+    group = 'own' if 'own' in origin else 'tier1' if 'tier1' in origin else 'd2pt'
+    return group, competition
 
 
 def bounded(path, limit):
@@ -74,14 +103,18 @@ def create_store(snapshot_path, output, context_paths=()):
         context_sources.append({'file': path.name, 'sha256': sha(content)})
         context_files.append((path,sha(content)))
     matches, wards, sources, events, issues = [], [], [], [], []
+    competitions = []
     player_summaries, player_series, context_coverage, public_wards = [], [], [], []
     seen = set()
     for entry in snapshot['matches']:
         identifier = mid(entry['match_id'])
+        refuse_locked_match(identifier)
         if identifier in seen:
             raise ValueError('postgame_duplicate_match')
         seen.add(identifier)
         manifest_raw = base64.b64decode(entry['manifest_base64'], validate=True)
+        manifest = json.loads(manifest_raw)
+        refuse_locked_match(str(manifest.get('match_id')))
         ward_raw = base64.b64decode(entry['wards_base64'], validate=True)
         if len(manifest_raw) > 256 * 1024 or len(ward_raw) > 5 * 1024**2:
             raise ValueError('postgame_export_budget')
@@ -102,9 +135,13 @@ def create_store(snapshot_path, output, context_paths=()):
         if not number(duration) or not 0 < duration <= 10800:
             raise ValueError('postgame_match_duration_invalid')
         origin = catalog.get('sources')
-        if not isinstance(origin, list) or not origin or any(s not in ('own', 'd2pt') for s in origin):
-            raise ValueError('postgame_origin_invalid')
-        source_group = 'own' if 'own' in origin else 'd2pt'
+        source_group, competition = source_category(catalog)
+        if competition is not None:
+            competitions.append((identifier, competition['league_id'], competition['league_name'],
+                                 competition['tier'], competition['liquipedia_url']))
+            provenance = {'sources': origin, 'sampling': competition}
+            provenance_raw = json.dumps(provenance, sort_keys=True).encode()
+            sources.append((identifier, 'source_catalog.json', sha(provenance_raw), provenance_raw))
         producer = {k: manifest.get(k) for k in ('parser_version', 'parser_commit', 'parser_sha256',
                                                 'ward_extractor_sha256', 'adapter_sha256')}
         if not all(isinstance(v, str) and v for v in producer.values()):
@@ -245,6 +282,9 @@ def create_store(snapshot_path, output, context_paths=()):
                 replay_sha256 TEXT,wards_sha256 TEXT,producer_cohort TEXT,producer_json TEXT,
                 patch_key TEXT,map_key TEXT,mode_key TEXT,source_mmr INTEGER,context_status TEXT,
                 context_sha256 TEXT,radiant_win INTEGER);
+            CREATE TABLE match_competitions(match_id TEXT PRIMARY KEY,league_id INTEGER NOT NULL,
+                league_name TEXT NOT NULL,tier INTEGER NOT NULL,classification_url TEXT NOT NULL,
+                FOREIGN KEY(match_id) REFERENCES matches(match_id));
             CREATE TABLE wards(match_id TEXT,ward_index INTEGER,ward_type TEXT,team INTEGER,x REAL,y REAL,
                 placed_s REAL,ended_s REAL,duration_s REAL,end_kind TEXT,placement_status TEXT,
                 lifetime_status TEXT,coordinate_basis TEXT,event_fingerprint TEXT,record_json TEXT,
@@ -276,6 +316,7 @@ def create_store(snapshot_path, output, context_paths=()):
                 ('schema_version', VERSION), ('snapshot_sha256', sha(raw)),
                 ('frozen_at_utc', snapshot['frozen_at_utc']), ('policy', 'facts_not_coaching_verdicts')])
             connection.executemany('INSERT INTO matches VALUES ('+','.join('?'*15)+')', matches)
+            connection.executemany('INSERT INTO match_competitions VALUES (?,?,?,?,?)', competitions)
             connection.executemany('INSERT INTO wards VALUES ('+','.join('?'*15)+')', wards)
             connection.executemany('INSERT INTO sources VALUES (?,?,?,?)', sources)
             connection.executemany('INSERT INTO events VALUES ('+','.join('?'*9)+')', events)
@@ -292,6 +333,7 @@ def create_store(snapshot_path, output, context_paths=()):
     result = {'schema_version': VERSION, 'snapshot_sha256': sha(raw),
               'frozen_at_utc': snapshot['frozen_at_utc'], 'matches': len(matches), 'wards': len(wards),
               'context_events': len(events), 'source_blobs': len(sources), 'issues': len(issues),
+              'source_group_counts': dict(Counter(m[1] for m in matches)), 'competition_matches': len(competitions),
               'player_summaries':len(player_summaries),'player_series_rows':len(player_series),
               'context_coverage_rows':len(context_coverage),'public_ward_logs':len(public_wards),
               'pending_context_matches': sorted(set(contexts)-seen),
