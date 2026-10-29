@@ -1,3 +1,5 @@
+2026-10-29：合入main的MIT LICENSE；公开封存名单默认空，guard合并Git忽略的本机名单，示例模板空白。入口/子进程/准入测试全部使用独立临时合成名单，自检同时核验两份策略且不输出ID。854项完整离线回归通过，无失败/错误/跳过/后台异常（run-ec17b9a661d2）；私有配置与原始资料保持本机，不随提交和部署发布。
+
 2026-10-29提交检查：清理四个新增测试文件的末尾空行；最终848项完整离线回归通过，0失败/错误/跳过/后台异常，337份源码/数据SHA复验一致（run-fac4ff6bc1e4）。暂存差异检查通过，不包含个人记录、本机配置或构建产物。
 
 2026-10-29：修复眼位闭合清单缺损失字段仍可能标完整的问题：dropped必须非负整数，limited/shutdown_timed_out必须显式布尔，images_saved必须0–80整数（拒绝bool）；正文准入前拒收，未发布元数据诊断仍独立。新增反例先复现9项失败，修复后26项专项与848项完整离线回归通过，337份源码/数据SHA一致；旧v1 PNG与v2 JPEG两份真实生产的生成像素包继续准入。未开游戏/设备/外网/改Foresight/提交，不认证地图真值。证据diagnostics/ward-camera-storage-20261029/strict-loss-compatibility.json与diagnostics/offline-tests/run-ae4c6472af66/result.json。

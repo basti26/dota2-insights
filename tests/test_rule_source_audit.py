@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 import hashlib
 import json
 from pathlib import Path
@@ -9,6 +10,9 @@ from dota2_insights.contracts.native_rules import rules_checksum
 
 
 class SourceAuditTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def fixture(self):
         from test_distribution_bundle import rules_payload
         t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup)

@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Synthetic helper records only; no real game, images, audio or helper code."""
 import copy
 import json
@@ -12,6 +13,7 @@ from dota2_insights import helper_handoff as handoff
 
 class HandoffTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.base = Path(temporary.name)

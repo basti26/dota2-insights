@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Generated callback context, including public sealed role IDs, no real body."""
 from datetime import datetime, timezone
 import unittest
@@ -6,6 +7,9 @@ from dota2_insights.audio_source_context import validate_reference_context, vali
 
 
 class AudioSourceContextTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def context(self):
         stamp = 1793040000
         return {'match_id': '12345', 'provider_timestamp': stamp,

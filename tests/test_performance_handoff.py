@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Known synthetic QPC/CSV records, independent of Foresight imports/ETW."""
 import hashlib
 import json
@@ -12,6 +13,7 @@ from dota2_insights.performance_review import BINARY_SHA256, VERSION
 
 class PerformanceHandoffTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.run_id = 'c'*32
@@ -71,7 +73,7 @@ class PerformanceHandoffTests(unittest.TestCase):
     def test_holdout_and_missing_complete_are_rejected_before_source_body(self):
         for heldout in (False, True):
             if heldout:
-                self.bound['match_id'] = '700000001'  # Public lock ID, no match body.
+                self.bound['match_id'] = '700000001'  # Synthetic local-lock ID, no match body.
                 self.write()
             else:
                 (self.folder/'COMPLETE').unlink()

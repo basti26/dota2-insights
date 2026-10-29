@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Synthetic identities/archives only; real sealed DEMs or answers never opened."""
 import hashlib
 import json
@@ -10,11 +11,12 @@ from dota2_insights.minimap import replay_alignment as alignment
 from dota2_insights.minimap import replay_baselines as baselines
 from dota2_insights.minimap.offline_io import check_match_metadata
 
-LOCKED = '700000001'  # Public role declaration, not a test data source.
+LOCKED = '700000001'  # Synthetic local-lock fixture, not a real match.
 
 
 class MinimapReplayAdmissionTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temporary = tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
 

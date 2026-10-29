@@ -4,12 +4,23 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import sys
+import json
 
 from dota2_insights import replay_archive as archive
 from dota2_insights.replay_holdout import refuse_locked_match
 
 
 class EntryLockTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        (root/'data').mkdir(); (root/'config').mkdir()
+        (root/'data/validation-locks.json').write_text(json.dumps({'schema_version':1,'heldout_matches':[]}))
+        (root/'config/validation-locks.local.json').write_text(json.dumps({'schema_version':1,'heldout_matches':['700000001']}))
+        patcher = patch('dota2_insights.replay_holdout.ROOT', root)
+        patcher.start(); self.addCleanup(patcher.stop)
+
     def test_known_sealed_footer_path_refused_before_proto_or_file_read(self):
         with self.assertRaisesRegex(ValueError,'封存'):
             archive._footer_match_id(Path('700000001.dem'))

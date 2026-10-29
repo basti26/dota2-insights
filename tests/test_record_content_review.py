@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Synthetic source journals; no real match, assets, capture or network."""
 import copy
 import hashlib
@@ -11,6 +12,9 @@ from dota2_insights.closed_journals import ClosedJournals, explicit_match
 
 
 class AnchorTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def test_same_match_bracketing_is_only_a_candidate(self):
         index = review.AnchorIndex([(0,'123'),(2,'123')])
         self.assertEqual(index.candidate('1970-01-01T00:00:01Z'),
@@ -35,6 +39,9 @@ class AnchorTests(unittest.TestCase):
 
 
 class ContentTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def fixture(self):
         from test_helper_handoff import HandoffTests
         f = HandoffTests()

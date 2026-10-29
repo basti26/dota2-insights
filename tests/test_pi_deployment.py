@@ -79,6 +79,9 @@ class DeploymentTests(unittest.TestCase):
             root=Path(t)
             for name,raw in payload.items():
                 path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+            (root/'config').mkdir()
+            (root/'config/validation-locks.local.json').write_text(json.dumps(
+                {'schema_version':1,'heldout_matches':['700000001']}))
             code="""import sys
 sys.path.insert(0,sys.argv[1])
 import library, pi_ward_worker, extract_replay_wards
@@ -92,7 +95,7 @@ try:
 except ValueError:
  pass
 else:
- raise AssertionError('public lock was not deployed')
+ raise AssertionError('local lock was not read by deployed guard')
 print('isolated_imports_ok')
 """
             result=subprocess.run([sys.executable,'-I','-S','-c',code,str(root)],

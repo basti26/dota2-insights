@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Generated PCM only; no recorder, listening label, internet or real match."""
 import copy
 import hashlib
@@ -15,6 +16,7 @@ from dota2_insights.audio_integrity_review import review, waveform
 
 class AudioIntegrityTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         from test_helper_handoff import HandoffTests
         self.fixture = f = HandoffTests()
         f.setUp()

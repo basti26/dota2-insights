@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Native contract fixtures authored here; no live helper imports or records."""
 import hashlib
 import json
@@ -12,6 +13,7 @@ from tools.review_match_journals import review
 
 class MatchJournalTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)

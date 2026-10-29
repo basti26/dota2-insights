@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Independently generated BP prefix contracts; no real session or UI."""
 import hashlib
 import json
@@ -11,6 +12,7 @@ from dota2_insights.draft_phase_handoff import STREAMS, open_rows, review, verif
 
 class DraftPhaseTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)

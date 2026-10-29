@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Generated HUD assets only; verify origin offsets and evidence rejection."""
 import hashlib
 from pathlib import Path
@@ -9,6 +10,9 @@ from dota2_insights.item_review_evidence import slot_crop
 
 
 class CropTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def fixture(self):
         temp=tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)

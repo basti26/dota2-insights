@@ -39,8 +39,12 @@ class InventoryAdmissionTests(unittest.TestCase):
             'truncated_at_tick': None, 'export_complete': True, 'stop_reason': 'replay_eof',
             'files': {'hero_samples.jsonl': {'bytes': self.samples.stat().st_size,
                 'sha256': hashlib.sha256(self.samples.read_bytes()).hexdigest()}}}
-        locks = json.loads((Path(__file__).resolve().parents[1] / 'data/validation-locks.json').read_text(encoding='utf-8'))
-        self.locked = locks['heldout_matches'][0]
+        self.locked = '700000001'
+        (self.root/'data').mkdir(); (self.root/'config').mkdir()
+        (self.root/'data/validation-locks.json').write_text(json.dumps({'schema_version':1,'heldout_matches':[]}))
+        (self.root/'config/validation-locks.local.json').write_text(json.dumps({'schema_version':1,'heldout_matches':[self.locked]}))
+        patcher = patch('dota2_insights.replay_holdout.ROOT', self.root)
+        patcher.start(); self.addCleanup(patcher.stop)
         self.save_manifest()
 
     def save_manifest(self):

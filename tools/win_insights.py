@@ -10,15 +10,14 @@ sys.path.insert(0, str(ROOT))
 
 
 def self_check():
-    from dota2_insights.replay_holdout import refuse_locked_match
+    from dota2_insights.replay_holdout import refuse_locked_match, locked_matches
     from dota2_insights.replay_archive import GEM_VERSION, GEM_COMMIT
     from dota2_insights.replay_workbench import dependency_status
     from dota2_insights.history import history_roots
-    locks = json.loads((ROOT / 'data/validation-locks.json').read_text(encoding='utf-8'))
     refused = 0
-    for match in locks['heldout_matches']:
+    for match in locked_matches(ROOT):
         try:
-            refuse_locked_match(match)
+            refuse_locked_match(match, ROOT)
         except ValueError:
             refused += 1
         else:

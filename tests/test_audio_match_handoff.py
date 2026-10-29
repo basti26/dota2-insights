@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Independent authored contract/PCM fixtures; no live producer imports."""
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from dota2_insights.audio_match_handoff import verify, review, open_package, _sc
 
 class AudioMatchReaderTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)/('run_'+'f'*32); self.root.mkdir()
         self.scope = {'match_id':'12345', 'game_session_id':'game_'+'a'*32, 'record_session_id':'run_'+'b'*32}

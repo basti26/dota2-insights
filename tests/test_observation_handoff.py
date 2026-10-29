@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Equipment handoff fixtures made independently of the real-time repository."""
 import hashlib
 import json
@@ -11,6 +12,7 @@ from dota2_insights.observation_handoff import open_rows, review, verify
 
 class ObservationHandoffTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)

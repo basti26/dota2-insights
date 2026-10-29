@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Independent IPC-context fixtures; no Foresight import, capture or game."""
 import copy
 import unittest
@@ -21,6 +22,9 @@ def sample():
 
 
 class MinimapContextTests(unittest.TestCase):
+    def setUp(self):
+        install_local_lock(self)
+
     def test_explicit_context_validated_without_whole_run_identity_claim(self):
         r = sample()
         self.assertEqual(binding(r, summary(header()))['context']['match_id'], '12345')

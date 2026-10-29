@@ -1,3 +1,4 @@
+from lock_fixtures import install_local_lock
 """Independent minimap contract fixtures, no Foresight imports or capture."""
 import hashlib
 import json
@@ -11,6 +12,7 @@ from dota2_insights.minimap_handoff import STREAM_LIMITS, open_rows, review, ver
 
 class MinimapHandoffTests(unittest.TestCase):
     def setUp(self):
+        install_local_lock(self)
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)

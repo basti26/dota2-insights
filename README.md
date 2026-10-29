@@ -39,4 +39,6 @@ python tools/win_insights.py --self-check
 
 离线测试：`python tools/run_offline_tests.py --pattern 'test_*.py'`。不启动游戏、采屏、录音或外网；回归记录保存到 `diagnostics/offline-tests/`。
 
-分析结果通过版本化记录包/数据包与助手交换，不从助手目录导入源码。规则/统计交付格式及检查工具见[数据包契约v1](docs/DISTRIBUTION_BUNDLES_V1.md)；Foresight读取适配尚未接入，不自动把眼位先验、能力候选或全知录像位置投放到实战。当前未新增许可证声明，拆仓不改变第三方许可。
+分析结果通过版本化记录包/数据包与助手交换，不从助手目录导入源码。规则/统计交付格式及检查工具见[数据包契约v1](docs/DISTRIBUTION_BUNDLES_V1.md)；Foresight读取适配尚未接入，不自动把眼位先验、能力候选或全知录像位置投放到实战。拆仓不改变第三方许可。
+
+封存名单：公开的 `data/validation-locks.json` 默认空；复制 `config/validation-locks.example.json` 为 `config/validation-locks.local.json` 后填写本机名单。guard 合并两份名单；本机文件被 Git 忽略，格式错误或超限时拒绝继续读取资料，不随部署包发布。

@@ -80,7 +80,9 @@ class ProjectBoundaryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
         value = json.loads(result.stdout)
         self.assertTrue(value['passed'])
-        self.assertGreater(value['sealed_matches_refused'], 0)
+        # An empty public policy and absent operator configuration is valid.
+        self.assertIs(type(value['sealed_matches_refused']), int)
+        self.assertGreaterEqual(value['sealed_matches_refused'], 0)
         self.assertFalse(value['historical_payloads_read'])
 
     def test_sibling_tools_bootstrap_without_inheriting_the_tools_directory(self):
