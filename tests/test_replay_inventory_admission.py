@@ -65,6 +65,28 @@ class InventoryAdmissionTests(unittest.TestCase):
         self.assertEqual(result['counts']['same_empty'], 8)
         self.assertEqual(result['inventory_item_multiset_counts'], {'same_item_multiset': 1})
 
+    def test_disputed_hud_in_readonly_sibling_history_preserves_source_reference(self):
+        row = json.loads(self.observations.read_text())
+        row['captured_at_utc'] = '2026-01-01T00:00:00+00:00'
+        row['attempt']['hero']['slots'][0]['item_id'] = 'force_staff'
+        image = self.root / 'hud-000001.png'
+        image.write_bytes(b'generated-image-source-bytes')
+        row.update(hud_image=image.name, hud_image_sha256=hashlib.sha256(image.read_bytes()).hexdigest())
+        self.observations.write_text(json.dumps(row) + '\n')
+        self.metadata['source_sha256'] = 'a' * 64
+        self.save_manifest()
+        self.report.write_text(json.dumps(economy.compare(self.observations, self.samples)))
+        with patch.object(audit, 'ROOT', self.root / 'insights'):
+            result = audit.prepare(self.report, self.observations, self.root)
+        frame = result['frames'][0]
+        self.assertIsNone(frame['hud_relative_to_project'])
+        self.assertEqual(frame['hud_relative_to_observations'], image.name)
+        self.assertEqual(frame['hud_image_sha256'], row['hud_image_sha256'])
+        self.assertEqual(result['disputed_slot_count'], 1)
+        image.write_bytes(b'tampered')
+        with self.assertRaisesRegex(ValueError, 'image_checksum_mismatch'):
+            audit.prepare(self.report, self.observations, self.root)
+
     def test_mismatched_parsed_identity_rejected_before_payload(self):
         self.metadata['parsed_match_id'] = '987654321'
         self.save_manifest()

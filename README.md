@@ -8,6 +8,18 @@
 
 接收后可运行 `python tools/review_closed_record_content.py`，汇总本人GSI、装备观测、BP界面回执和共享资料的场次候选；再按报告准备大件原图裁片。流程与限制见[闭合记录内容复核](docs/CLOSED_RECORD_REVIEW.md)。时间候选不当作身份真值，裁片准备不等于识别验收通过。
 
+自动赛后经济复查支持独立后台、来源准入、等待录像和增量报告，见[自动经济复查](docs/AUTOMATIC_ECONOMY_REVIEW.md)。
+
+## 地图与眼位原型
+
+已支持本机地图资源提取、版本快照与变化检查，以及地标、冻结截图、历史眼位的离线对照。眼位保留录像原坐标，绑定目标地图模型，可按放置时间查看每10分钟分布；版本未知仅预览，已知不匹配禁止绘制。游戏素材、用户采样和生成资料不随仓库发布，需要在本机准备。
+
+- [原型使用与资料准备](docs/VIRTUAL_MAP_PROTOTYPE.md)
+- [地图更新接口](docs/MAP_UPDATE_INTERFACE.md)
+- [眼位版本接入与时间筛选](docs/WARD_MAP_INTEGRATION.md)
+
+这些功能不自动认证全地图精度、可插眼性或实战投影，不将全知录像位置发送到游戏覆盖层。
+
 ## 备用启动入口
 
 已有独立免安装版：完整解压 `dist/insights-0.1.0-20261025-125559-566019/Dota2Insights-0.1.0-win64.zip`，双击其中 `Dota2Insights.exe`，无需安装Python。交付路径、检查范围和限制见 [免安装版交接](docs/PORTABLE_RELEASE_20261025.md)。本机构建产物被Git忽略，仓库不会携带个人数据或二进制ZIP。
