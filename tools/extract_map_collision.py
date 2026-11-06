@@ -29,7 +29,7 @@ def guard():
 
 
 def decode(decoder, compiled, output, check=guard, block='PHYS'):
-    if block not in {'PHYS', 'DATA', 'CTRL', 'RED2'}:
+    if block not in {'PHYS', 'DATA', 'CTRL', 'RED2', 'MDAT'}:
         raise ValueError('unsupported_map_export_block')
     check()
     errors = output.with_suffix('.stderr')

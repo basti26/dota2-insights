@@ -3,9 +3,36 @@ import base64
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 
 from .replay_holdout import refuse_locked_match
+
+
+def height_fields(manifest,ward,index):
+    value=ward.get('height_observation')
+    if value is None:return {}
+    from .replay_height import height_observation,FIELDS
+    if not isinstance(value,dict) or not isinstance(value.get('components'),dict):
+        raise ValueError('ward_reference_height_shape')
+    if (value.get('centered_transform_verified') is not False or value.get('ground_height_verified') is not False
+            or value.get('status')=='recorded' and (type(value.get('raw_z')) not in (int,float) or not math.isfinite(value['raw_z']))):
+        raise ValueError('ward_reference_height_type_or_claim')
+    computed=height_observation(value['components'])
+    # Invalid raw types were already sanitized by the producer. Preserve its
+    # invalid/missing distinction, but never a value or an accuracy claim.
+    if value.get('status') in ('missing_components','invalid_components'):
+        computed['status']=value['status']
+    if value!=computed or set(value['components'])!=set(FIELDS):
+        raise ValueError('ward_reference_height_value_or_claim')
+    if (ward.get('height_association')!='same_native_placement_event_and_entity_callback'
+            or any(type(ward.get(k)) is not int or not 0<=ward[k]<2**32 for k in ('height_entity_index','height_entity_serial'))
+            or any(not isinstance(manifest.get(k),str) or not re.fullmatch('[a-f0-9]{64}',manifest[k])
+                   for k in ('height_adapter_sha256','source_sha256'))):
+        raise ValueError('ward_reference_height_source')
+    return {'height_observation':computed,'height_source':{'ward_index':index,
+        'entity_index':ward['height_entity_index'],'entity_serial':ward['height_entity_serial'],
+        'association':ward['height_association']}}
 
 
 def build(manifest, wards_raw, *, tree_reviews=None):
@@ -49,11 +76,13 @@ def build(manifest, wards_raw, *, tree_reviews=None):
         points.append({'id': key, 'x': x, 'y': y, 'ward_type': ward['ward_type'],
             'team': ward.get('team'), 'placed_game_time_s': ward.get('placed_game_time_s'),
             'tree_clearance': review['clearance'] if review else 'unknown',
-            'tree_evidence': review['evidence'] if review else None})
+            'tree_evidence': review['evidence'] if review else None,
+            **height_fields(manifest,ward,index)})
     if reviews:
         raise ValueError('tree_review_unknown_ward')
     return {'schema_version':1,'kind':'historical_ward_reference','match_id':identifier,
         'source_replay_sha256':manifest.get('source_sha256'),'source_wards_sha256':digest,
+        'height_adapter_sha256':manifest.get('height_adapter_sha256'),
         'coordinate_basis':'gem_cell128_plus_vec_raw_coordinates','map_version':'unknown',
         'source_ward_count':len(wards),'points':points,'unavailable':unavailable,
         'tree_clearance_inferred':False,'preference_statistics':False,'world_projection_verified':False}

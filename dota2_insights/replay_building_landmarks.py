@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import re
+from .replay_height import height_observation
 
 SCHEMA = 'replay_building_entity_landmarks_v1'
 CLASSES = ('CDOTA_BaseNPC_Tower', 'CDOTA_BaseNPC_Barracks',
@@ -85,7 +86,9 @@ class Collector:
             pos = _pos(entity) if valid else None
             if pos is not None and not all(math.isfinite(v) for v in pos):
                 raise LandmarkLimit('building_nonfinite_position')
-            state = (npc, tuple(raw.values()), entity.get('m_iTeamNum'), entity.get('m_lifeState'))
+            height=height_observation(entity)
+            state = (npc, tuple(raw.values()), entity.get('m_iTeamNum'), entity.get('m_lifeState'),
+                     height['status'],tuple(height['components'].values()))
             if self.last.get(key) == state:
                 continue
             self.last[key] = state
@@ -100,6 +103,7 @@ class Collector:
                              'position_components': raw,
                              'world_x': pos[0] if pos is not None else None,
                              'world_y': pos[1] if pos is not None else None,
+                             'height_observation':height,
                              'coordinate_basis': 'gem_cell128_plus_vec_raw_coordinates',
                              'observation_basis': 'completed_packet_entity_state_not_combat_log_location',
                              'name_attributes': parsed})

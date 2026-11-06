@@ -88,6 +88,7 @@ def main():
               'parser_version': GEM_VERSION, 'parser_commit': GEM_COMMIT,
               'snapshot_helper_sha256': sha256_file(Path(snapshots.__file__)),
               'collector_sha256': sha256_file(ROOT / 'dota2_insights/replay_building_landmarks.py'),
+              'height_adapter_sha256':sha256_file(ROOT / 'dota2_insights/replay_height.py'),
               'adapter_sha256': sha256_file(Path(__file__)),
               'game_clock': asdict(parser.game_clock),
               'observed_classes': sorted(collector.classes),

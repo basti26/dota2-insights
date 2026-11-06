@@ -51,7 +51,7 @@ def dependency_inputs(root=ROOT):
                 or file_sha256(original) != file_sha256(path)):
             raise ValueError('installed_gem_differs_from_pinned_checkout')
         selected[path] = 'gem/' + relative.as_posix()
-    for name in ('replay_archive.py', 'replay_workbench.py', 'replay_runtime.py', 'replay_holdout.py',
+    for name in ('replay_archive.py', 'replay_height.py', 'replay_workbench.py', 'replay_runtime.py', 'replay_holdout.py',
                  'portable_replay.py', 'replay_visibility_recording.py', 'replay_phase_evidence.py',
                  'replay_death_semantics.py', 'replay_periods.py', 'replay_fact_review.py'):
         selected[root / 'dota2_insights' / name] = 'dota2_insights/' + name

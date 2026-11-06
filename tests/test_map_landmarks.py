@@ -16,6 +16,15 @@ def document():
 
 
 class LandmarkTests(unittest.TestCase):
+    def test_tower_expansion_is_explicit_and_does_not_change_legacy_inventory(self):
+        data = document()+entity('npc_dota_tower','2, 3, 4','targetname = "tower-test"')
+        self.assertEqual(extract(data)['landmark_count'], 1)
+        result = extract(data, include_towers=True)
+        self.assertEqual(result['landmark_count'], 2)
+        self.assertEqual(result['landmarks'][-1]['origin_xyz'], [2, 3, 4])
+        self.assertFalse(result['landmarks'][-1]['image_glyph_center_correspondence_verified'])
+        with self.assertRaises(ValueError): extract(data, include_towers='yes')
+
     def test_boundaries_are_distinct_from_world_bounds_and_origin_is_not_image_truth(self):
         result=extract(document())
         self.assertEqual(result['declared_minimap_window'],{'min_x':-10,'min_y':-20,'max_x':30,'max_y':40})

@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import sys
 import time
+from .replay_height import height_observation
 
 from .replay_archive import (GEM_COMMIT, GEM_VERSION, COORDINATE_BASIS,
                              _footer_match_id, _windows_dota_running, sha256_file)
@@ -15,6 +16,8 @@ from .replay_archive import (GEM_COMMIT, GEM_VERSION, COORDINATE_BASIS,
 def extract_landmarks(source, *, max_seconds=60):
     if not 1 <= max_seconds <= 120:
         raise ValueError("landmark_wall_time_limit_invalid")
+    from .replay_holdout import refuse_locked_match
+    refuse_locked_match(Path(source).stem)
     if sys.platform == "win32":
         if _windows_dota_running():
             raise ValueError("offline_landmarks_refused_while_dota_running")
@@ -36,10 +39,11 @@ def extract_landmarks(source, *, max_seconds=60):
     before = source.stat()
     if not 16 <= before.st_size <= 512 * 1024 ** 2:
         raise ValueError("bounded_replay_source_required")
-    digest = sha256_file(source)
     match_id = _footer_match_id(source)
     if not match_id:
         raise ValueError("independent_replay_identity_required")
+    refuse_locked_match(match_id)
+    digest = sha256_file(source)
     parser = ReplayParser(source)
     started = time.monotonic()
     last_guard = started
@@ -82,6 +86,7 @@ def extract_landmarks(source, *, max_seconds=60):
             rows.append({"name": name, "class_name": classname, "team": team,
                          "entity_index": entity.get_index(), "entity_serial": entity.get_serial(),
                          "world_x": pos[0], "world_y": pos[1],
+                         "height_observation":height_observation(entity),
                          "alive": entity.get("m_lifeState") == 0 if type(entity.get("m_lifeState")) is int else None})
         if not 2 <= len(rows) <= 128:
             raise ValueError("stationary_building_count_invalid")
@@ -102,6 +107,7 @@ def extract_landmarks(source, *, max_seconds=60):
             "parser": {"name": "gem-dota", "version": GEM_VERSION, "upstream_commit": GEM_COMMIT,
                        "runtime_parser_sha256": sha256_file(Path(parser_module.__file__))},
             "tool_source_sha256": sha256_file(Path(__file__)),
+            "height_adapter_sha256":sha256_file(Path(__file__).with_name('replay_height.py')),
             "coordinate_basis": COORDINATE_BASIS,
             "elapsed_seconds": time.monotonic() - started,
             "own_process_below_normal": priority_lowered, "parse_error": None,

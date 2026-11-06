@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from dota2_insights.pi_replay_library import Bridge
 
 FILES = ('tools/extract_replay_building_landmarks.py', 'dota2_insights/replay_building_landmarks.py',
+         'dota2_insights/replay_height.py',
          'dota2_insights/postgame_target_names.py', 'dota2_insights/replay_archive.py')
 sha = lambda raw: hashlib.sha256(raw).hexdigest()
 

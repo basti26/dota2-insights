@@ -10,9 +10,10 @@ import statistics
 
 from .replay_holdout import refuse_locked_match
 from .match_journal_index import history_bases
+from .ward_projection_diagnostics import ProjectionDiagnostics
 
 MAX_BYTES=128*1024**2
-KINDS={'location','surface','waiting','capture_error','surface_error','capture_unavailable','reference_added'}
+KINDS={'location','surface','waiting','capture_error','surface_error','capture_unavailable','reference_added','native_camera_position'}
 
 
 def _digest(path):
@@ -107,6 +108,36 @@ def _projection(row):
     return count,len(points),omitted,error
 
 
+def _terrain_projection(row):
+    value=row.get('terrain_registration')
+    if value is None:return 0,None
+    if not isinstance(value,dict) or value.get('version')!='ward_terrain_trial_v1':
+        raise ValueError('ward_terrain_evidence_version')
+    if (value.get('status') not in ('unlocalized','experimental_visual_reference')
+            or value.get('coordinate_accuracy_verified') is True
+            or not isinstance(value.get('reason'),str) or not re.fullmatch('[a-z_]{1,80}',value['reason'])):
+        raise ValueError('ward_terrain_status_or_claim')
+    points=value.get('minimap_markers')
+    if not isinstance(points,list) or len(points)>128:raise ValueError('ward_terrain_markers')
+    if value.get('status')!='experimental_visual_reference':
+        if points:raise ValueError('ward_terrain_unlocalized_points')
+        return 0,value.get('reason')
+    matrix=value.get('raw_to_minimap_screen');roi=value.get('minimap_roi');age=value.get('registration_age_s')
+    if (value.get('coordinate_accuracy_verified') is not False
+            or not isinstance(matrix,list) or len(matrix)!=3 or any(not isinstance(r,list) or len(r)!=3 for r in matrix)
+            or any(type(x) not in (int,float) or not math.isfinite(x) for r in matrix for x in r)
+            or not isinstance(roi,list) or len(roi)!=4 or any(type(x) is not int for x in roi)
+            or not (0<=roi[0] and 0<=roi[1] and roi[2]>0 and roi[3]>0
+                    and roi[0]+roi[2]<=row['width'] and roi[1]+roi[3]<=row['height'])
+            or type(age) not in (int,float) or not math.isfinite(age) or not 0<=age<=2.5):
+        raise ValueError('ward_terrain_projection_context')
+    _projection({**row,'projected_count':len(points),'projected_markers':points,'projected_omitted':0,'reprojection_error_px':None})
+    for point in points:
+        if (point.get('surface')!='minimap' or not roi[0]<=point['x']<roi[0]+roi[2]
+                or not roi[1]<=point['y']<roi[1]+roi[3]):raise ValueError('ward_terrain_point_outside_minimap')
+    return len(points),value.get('reason')
+
+
 def _surface_links(locations,surfaces):
     joined=0;unknown=Counter();contradictions=Counter();examples=[]
     for number,key,shown,reason in surfaces:
@@ -160,7 +191,9 @@ def review(folder):
         if p.stat().st_size!=ref['bytes'] or _digest(p)!=ref['sha256']:raise ValueError('ward_camera_source_mismatch')
         paths[name]=p
     counts=Counter();statuses=Counter();reasons=Counter();image_refs=set();surfaces=Counter();rows=0
-    locations={};surface_events=[];projection_counts=Counter();registration_errors=[];encodings=Counter()
+    projection_diagnostics=ProjectionDiagnostics()
+    native_frames=Counter()
+    locations={};surface_events=[];projection_counts=Counter();registration_errors=[];encodings=Counter();terrain_counts=Counter()
     with paths['events.jsonl'].open('rb') as f:
         while True:
             raw=f.readline(256*1024+1)
@@ -176,6 +209,8 @@ def review(folder):
                     raise ValueError('ward_camera_undeclared_context')
                 refuse_locked_match(context.get('match_id'))
             if row['kind']=='location':
+                from .native_camera_review import validate_snapshot
+                validate_snapshot(row.get('native_camera_telemetry'))
                 if context is None:raise ValueError('ward_camera_location_context_missing')
                 try:
                     at=datetime.fromisoformat(row['captured_at_utc'].replace('Z','+00:00'))
@@ -192,13 +227,26 @@ def review(folder):
                         raise ValueError('ward_camera_matrix')
                 elif matrix is not None or row.get('projected_count')!=0:raise ValueError('ward_camera_unlocalized_projection')
                 count,saved,omitted,error=_projection(row)
+                projection_diagnostics.add(row)
+                mini,terrain_reason=_terrain_projection(row)
+                if terrain_reason:terrain_counts[terrain_reason]+=1
+                terrain_counts['stored_minimap_marker_observations']+=mini
                 projection_counts['frames_with_points']+=int(count>0)
                 projection_counts['stored_marker_observations']+=saved
                 projection_counts['omitted_marker_observations']+=omitted
                 if error is not None and status=='experimental_visual_reference':registration_errors.append(error)
                 key=_frame_key(row)
-                if key is not None:locations.setdefault(key,[]).append({'line':rows,'status':status,'points':count})
+                if key is not None:locations.setdefault(key,[]).append({'line':rows,
+                    'status':'experimental_visual_reference' if mini else status,'points':count+mini})
                 statuses[status]+=1
+            if row['kind']=='native_camera_position':
+                from .native_camera_review import validate_position
+                if (d['schema_version']!=2 or context is None or row.get('projection_applied') is not False
+                        or row.get('frame_id','missing') is not None
+                        or row.get('capture_frame_alignment_verified') is not False):
+                    raise ValueError('native_camera_event_claim')
+                validate_position(row.get('telemetry'))
+                if counts['native_camera_position']>=128:raise ValueError('native_camera_event_limit')
             if row['kind']=='surface':
                 if type(row.get('shown')) is not bool or row.get('os_visibility_verified') is not False:
                     raise ValueError('ward_camera_surface_claim')
@@ -220,6 +268,12 @@ def review(folder):
                     encodings[d['image_format']]+=1
                 else:encodings['legacy_v1_png_unspecified']+=1
                 image_refs.add(image['file'])
+            if row['kind']=='location':
+                native_frames['location_frames']+=1
+                native_snapshot=row.get('native_camera_telemetry') or {}
+                if native_snapshot.get('candidate_recent') is True:
+                    native_frames['frames_with_native_candidate']+=1
+                    if image is not None:native_frames['candidate_frames_with_image_bytes_verified']+=1
             counts[row['kind']]+=1
     if type(d.get('written')) is not int or rows!=d['written'] or d.get('images_saved')!=len(files)-1:
         raise ValueError('ward_camera_declared_counts')
@@ -232,12 +286,20 @@ def review(folder):
         p=_file(folder,name)
         if p.stat().st_size!=files[name]['bytes'] or _digest(p)!=files[name]['sha256']:
             raise ValueError('ward_camera_source_changed')
+    from .native_camera_review import summary as native_summary
     return {'run_id':d['run_id'],'package_id':hashlib.sha256(header).hexdigest(),
+        'native_camera_summary':native_summary(counts['native_camera_position']),
+        'native_calibration_readiness':{'counts':dict(native_frames),
+            'explicit_3d_landmarks_available':False,'capture_frame_alignment_verified':False,
+            'calibration_ready':False,'required':['explicit_3d_landmark_to_pixel_correspondences',
+                'independent_fit_and_check_points','camera_to_frame_alignment_evidence']},
         'state':'closed_verified' if d['complete'] else 'closed_verified_with_gaps',
         'contexts':d['contexts'],'events':rows,'event_counts':dict(counts),'location_status_counts':dict(statuses),
+        'terrain_registration_counts':dict(terrain_counts),
         'reason_counts':dict(reasons),'surface_counts':dict(surfaces),'image_files_verified':len(files)-1,
         'surface_linkage':_surface_links(locations,surface_events),
         'projection_summary':dict(projection_counts),
+        'projection_diagnostics':projection_diagnostics.summary(),
         'registration_error_px':{'reported_samples':len(registration_errors),
             'median':statistics.median(registration_errors) if registration_errors else None,
             'maximum':max(registration_errors) if registration_errors else None,
@@ -246,6 +308,12 @@ def review(folder):
         'coordinate_accuracy_verified':False,'os_visibility_verified':False,
         'image_pixels_decoded':False,'declared_image_encoding_counts':dict(encodings),
         'image_interval_s':d.get('image_interval_s'),'schema_version':d['schema_version'],
+        'declared_image_sampling_policy':d.get('image_sampling_policy'),
+        'declared_image_window_period_s':d.get('image_window_period_s'),
+        'declared_image_window_planned_count':d.get('image_window_planned_count'),
+        'declared_image_sampling_extensions':d.get('image_sampling_extensions',[]),
+        'declared_native_camera_image_limit':d.get('native_camera_image_limit',0),
+        'declared_native_camera_image_interval_s':d.get('native_camera_image_interval_s'),
         'native_frame_pixel_hash_verified':False,'time_basis':'original_capture_utc_and_relay_provider_not_index_time'}
 
 
@@ -309,8 +377,15 @@ def render_markdown(result):
         lines.append(f"|{row['run_id']}|{row['state']}|{row['events']}|{row['image_files_verified']}|{row['location_status_counts']}|")
     for row in result['reports']:
         linkage=row['surface_linkage']
+        diagnostic=row['projection_diagnostics'];windows=diagnostic['sampled_windows']
         lines.extend(['',f"### 记录 {row['run_id']}",'',f"定位→Tk回执严格配对：{linkage['matched_prior_location']}；未知：{linkage['unknown_reasons']}；矛盾：{linkage['contradictions']}。",
+            f"Alt原生镜头位置事件：{row.get('native_camera_summary',{}).get('position_events',0)}；仅含镜头XYZ/目标XY，缺目标高度及FOV，不认证同帧、完整相机或贴地精度。",
             f"投影记录：{row['projection_summary']}；配准残差（非真实地图误差）：{row['registration_error_px']}。",
+            f"投影确认/隐藏原因：{diagnostic['reason_counts']}；本人候选锚点偏差（非独立真值）：{diagnostic['self_anchor_disagreement_px']}。",
+            f"三维镜头候选诊断：{diagnostic['plane_camera_diagnostics']['reason_counts']}；只在明确底图镜头且未推断轮廓时尝试，数学候选不认证实际镜头。",
+            f"三边＋本人锚点候选：{diagnostic['anchor_plane_diagnostics']['reason_counts']}；其相机约束结果：{diagnostic['anchor_plane_diagnostics']['camera_recovery_counts']}。拟合锚点误差不等于定位准确率，当前未用于显示。",
+            f"连续取样窗口：{windows['window_count']}；完整三帧/不完整：{windows['counts']}；无法比较原因：{windows['unmeasured_pair_reasons']}。",
+            f"扣除背景运动后原始模型偏差：{windows['raw_model_motion_compensated_residual_px']}；补偿后显示偏差：{windows['motion_compensated_residual_px']}。补偿结果受算法约束，不能当作独立地图精度；空值表示未测得。",
             f"图片编码声明：{row['declared_image_encoding_counts']}；JPEG有损、原尺寸保留，未据图片字节SHA认证原始像素。",''])
     unpublished=result.get('unpublished_sessions',[])
     if unpublished:

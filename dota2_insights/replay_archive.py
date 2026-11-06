@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from .replay_height import height_observation
 
 SCHEMA_VERSION = 1
 GEM_COMMIT = "bae361de1d82e7a0a8457c788bf6f9d90e9c4d86"
@@ -408,6 +409,7 @@ def parse_archive(source: Path, output: Path, options: ArchiveOptions) -> dict[s
             paused_raw = rules.get("m_pGameRules.m_bGamePaused") if rules is not None else None
             row: dict[str, Any] = {"kind": "hero_sample", "schema_version": SCHEMA_VERSION, "match_id": match_id, "tick": tick, "net_tick": parser.net_tick, "game_time_s": game_time, "game_time_basis": "gem_pause_aware_engine_game_clock", "packet_boundary": "after_entity_updates", "hero_id": name, "hero_name": name, "hero_numeric_id": _integer(HEROES.get(name, {}).get("id")), "player_slot": player_id, "team": scan.team_by_id.get(player_id), "entity_index": hero.get_index(), "entity_serial": hero.get_serial(), "world_x": _finite(pos[0]) if pos else None, "world_y": _finite(pos[1]) if pos else None, "coordinate_basis": COORDINATE_BASIS, "alive": None if life is None else life == 0, "life_state_raw": life, "health": _integer(hero.get("m_iHealth")), "level": _integer(resource.get(f"m_vecPlayerTeamData.{resource_index:04d}.m_iLevel")), "paused": paused_raw if isinstance(paused_raw, bool) else None, "inventory": inventory(hero), "visibility": visibility(hero), "consumed_scepter": None, "consumed_shard": None, "upgrade_evidence": {}}
             row["position_sample_tick"] = tick
+            row["height_observation"] = height_observation(hero)
             # Whitelisted offline lane counters. Missing fields remain null;
             # never use upstream snapshot defaults of zero as measured values.
             team_slot = scan.team_slot_by_id.get(player_id)
@@ -511,6 +513,7 @@ def parse_archive(source: Path, output: Path, options: ArchiveOptions) -> dict[s
     if parser.parse_error:
         manifest["stop_reason"] = "replay_data_error"
     manifest["source_identity_basis"] = "independent_indexed_DEM_FileInfo_uint64"
+    manifest["height_adapter_sha256"] = sha256_file(packaged_source(Path(__file__).with_name('replay_height.py')))
     post_game_tick = _integer(parser.post_game_tick)
     manifest["match_phase_boundary"] = {
         "post_game_tick": post_game_tick,

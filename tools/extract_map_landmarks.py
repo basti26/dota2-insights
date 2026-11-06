@@ -13,7 +13,7 @@ from dota2_insights.virtual_map import MapIdentity,WorldBounds,VirtualMap
 from tools.extract_map_collision import digest,decode,guard,DECODER_SHA256
 
 
-def run(game,decoder,output):
+def run(game,decoder,output,*,include_towers=False):
     guard();game=Path(game).resolve(strict=True);decoder=Path(decoder).resolve(strict=True)
     output=checked_output(ROOT,output)
     if output.exists():raise ValueError('new_landmark_output_required')
@@ -28,7 +28,7 @@ def run(game,decoder,output):
     first,repeat=output/'DATA.txt',output/'DATA.repeat.txt'
     decode(decoder,compiled,first,block='DATA');decode(decoder,compiled,repeat,block='DATA')
     if digest(first)!=digest(repeat):raise ValueError('entity_exports_differ')
-    result=extract(first.read_text(encoding='utf-8-sig'))
+    result=extract(first.read_text(encoding='utf-8-sig'), include_towers=include_towers)
     sha=hashlib.sha256(raw).hexdigest();build=int(fields['ClientVersion'])
     result.update(map_asset_sha256=sha,client_build=build,source_resource=resource,
         resource_sha256=hashlib.sha256(body).hexdigest(),source_export_sha256=digest(first),decoder_sha256=DECODER_SHA256)
@@ -45,8 +45,9 @@ def run(game,decoder,output):
 def main():
     cli=argparse.ArgumentParser(description=__doc__)
     cli.add_argument('--game',type=Path,required=True);cli.add_argument('--decoder',type=Path,required=True)
-    cli.add_argument('--output',type=Path,required=True);args=cli.parse_args()
-    result=run(args.game,args.decoder,args.output)
+    cli.add_argument('--output',type=Path,required=True)
+    cli.add_argument('--include-towers',action='store_true');args=cli.parse_args()
+    result=run(args.game,args.decoder,args.output,include_towers=args.include_towers)
     print(json.dumps({key:result[key] for key in ('landmark_count','declared_minimap_window','client_build')}))
 
 

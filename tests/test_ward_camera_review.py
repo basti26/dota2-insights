@@ -7,6 +7,45 @@ from dota2_insights.ward_camera_review import review,discover_and_review
 
 
 class WardCameraReviewTests(unittest.TestCase):
+    def test_sampling_policy_remains_declared_not_false_fixed_interval(self):
+        self.header.update(schema_version=2,image_format='jpeg',jpeg_quality=90,
+            native_image_dimensions_preserved=True,image_sampling_policy='window_triplet',
+            image_window_period_s=300.,image_window_planned_count=3,image_interval_s=None)
+        self.row['schema_version']=2
+        self.save();r=review(self.run)
+        self.assertIsNone(r['image_interval_s'])
+        self.assertEqual(r['declared_image_sampling_policy'],'window_triplet')
+        self.assertEqual(r['declared_image_window_period_s'],300.)
+        self.assertEqual(r['declared_image_window_planned_count'],3)
+        self.assertEqual(r['image_files_verified'],0)
+        self.assertFalse(r['coordinate_accuracy_verified'])
+
+    def test_stability_diagnostics_integrated_after_package_admission(self):
+        self.row['projection_stability']={'version':'ward_motion_confirmation_v1',
+            'accepted':False,'reason':'projection_confirming','coordinate_accuracy_verified':False}
+        self.save();result=review(self.run)
+        self.assertEqual(result['projection_diagnostics']['reason_counts'],{'projection_confirming':1})
+        self.assertFalse(result['projection_diagnostics']['complete_overlap_verified'])
+        self.row['projection_stability']['accepted']=True;self.save()
+        with self.assertRaisesRegex(ValueError,'stability_claim'):review(self.run)
+
+    def test_minimap_only_projection_is_accounted_for_without_claiming_world_alignment(self):
+        terrain={'version':'ward_terrain_trial_v1','status':'experimental_visual_reference',
+                 'reason':'terrain_minimap_registered','coordinate_accuracy_verified':False,
+                 'raw_to_minimap_screen':[[1,0,0],[0,1,0],[0,0,1]],'minimap_roi':[0,500,200,200],
+                 'registration_age_s':0,'minimap_markers':[{'id':'mini','x':100.,'y':600.,'color':'#39eb70',
+                    'tree_cross':False,'surface':'minimap'}]}
+        self.row['terrain_registration']=terrain
+        self.save_events([self.row,self.surface()]);r=review(self.run)
+        self.assertEqual(r['terrain_registration_counts']['stored_minimap_marker_observations'],1)
+        self.assertEqual(r['surface_linkage']['contradictions'],{})
+        for key,value in (('registration_age_s',4),('coordinate_accuracy_verified',True)):
+            old=terrain[key];terrain[key]=value;self.save_events([self.row])
+            with self.assertRaises(ValueError):review(self.run)
+            terrain[key]=old
+        terrain['minimap_markers'][0]['x']=300;self.save_events([self.row])
+        with self.assertRaises(ValueError):review(self.run)
+
     def setUp(self):
         t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup);self.root=Path(t.name)
         self.run=self.root/'ward-camera'/('run_'+'a'*32);self.run.mkdir(parents=True)
@@ -218,5 +257,54 @@ class WardCameraReviewTests(unittest.TestCase):
         with patch('dota2_insights.ward_camera_review._digest',side_effect=AssertionError('payload read')):
             result=discover_and_review({'helper_history':self.root,'helper_releases':self.root/'releases'})
         self.assertFalse(result['reports']);self.assertEqual(result['skipped'][0]['state'],'conflicting_closed_versions')
+
+    def native_event(self):
+        from math import degrees,atan2
+        camera=[412.293823,-5294.683594,1188.453125];xy=[412.293793,-4694.683594]
+        return {'schema_version':2,'kind':'native_camera_position','context':deepcopy(self.row['context']),
+            'projection_applied':False,'frame_id':None,'capture_frame_alignment_verified':False,
+            'telemetry':{'kind':'alt_camera_position_v1','camera_xyz':camera,'look_at_xy':xy,
+                'look_at_z':None,'pitch_degrees':None,'roll_degrees':None,'fov_degrees':None,'data_time_utc':None,
+                'yaw_xy_degrees':degrees(atan2(xy[1]-camera[1],xy[0]-camera[0])),
+                'atomic_pair_verified':False,'request_association_verified':False,'projection_calibrated':False,
+                'live_usable':False,'exact_log_flush_latency_verified':False,'game_control_sent':False,
+                'capture_frame_alignment_verified':False,'log_observed_monotonic':100.,
+                'press_to_log_visible_candidate_ms':80.,'alt_epoch':1,'log_generation':1,
+                'visible_in_read_byte_range':[1000,1250],'read_chunk_sha256':'a'*64,
+                'received_at_utc':'2026-11-06T00:13:42+00:00'}}
+
+    def native_header(self):
+        self.header.update(schema_version=2,image_format='jpeg',jpeg_quality=90,
+            native_image_dimensions_preserved=True)
+
+    def test_native_positions_have_separate_summary_not_zero_pairs_or_projection(self):
+        self.native_header();event=self.native_event();self.save_events([event])
+        result=review(self.run)
+        self.assertEqual(result['native_camera_summary']['position_events'],1)
+        self.assertEqual(result['native_camera_summary']['complete_camera_pairs'],0)
+        self.assertFalse(result['native_camera_summary']['world_to_screen_verified'])
+
+    def test_native_unknown_geometry_bool_vectors_bad_clocks_or_projections_refused(self):
+        self.native_header()
+        for key,value in [('look_at_z',0),('fov_degrees',70),('live_usable',True),
+                          ('camera_xyz',[True,0,1]),('press_to_log_visible_candidate_ms',751),
+                          ('yaw_xy_degrees',0),('read_chunk_sha256','bad')]:
+            event=self.native_event();event['telemetry'][key]=value;self.save_events([event])
+            with self.subTest(key=key),self.assertRaises(ValueError):review(self.run)
+        event=self.native_event();event['projection_applied']=True;self.save_events([event])
+        with self.assertRaises(ValueError):review(self.run)
+
+    def test_native_snapshots_and_run_limits_reject_stale_or_excess_records(self):
+        self.native_header();event=self.native_event();self.row['schema_version']=2
+        self.row['native_camera_telemetry']={'version':'alt_camera_position_v1','projection_ready':False,
+            'live_usable':False,'game_control_sent':False,'candidate_recent':True,
+            'candidate':event['telemetry'],'candidate_age_since_log_visible_s':.2}
+        self.save_events([self.row]);review(self.run)
+        self.assertEqual(review(self.run)['native_calibration_readiness']['counts']['frames_with_native_candidate'],1)
+        self.row['native_camera_telemetry']['candidate_age_since_log_visible_s']=.6
+        self.save_events([self.row])
+        with self.assertRaises(ValueError):review(self.run)
+        self.save_events([event]*129)
+        with self.assertRaisesRegex(ValueError,'native_camera_event_limit'):review(self.run)
 
 if __name__=='__main__':unittest.main()

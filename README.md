@@ -17,6 +17,11 @@
 - [原型使用与资料准备](docs/VIRTUAL_MAP_PROTOTYPE.md)
 - [地图更新接口](docs/MAP_UPDATE_INTERFACE.md)
 - [眼位版本接入与时间筛选](docs/WARD_MAP_INTEGRATION.md)
+- [窗口/平移独立评估与证据缺口](docs/MAP_EVALUATION_PLAN.md)
+- [同包跨构建开发比较与冻结图标关联](docs/MAP_DEVELOPMENT_COMPATIBILITY.md)
+- [录像坐标平移的同名静态对象证据](docs/MAP_TRANSLATION_EVIDENCE.md)
+- [纯底图纹理配准与裁框偏差核查](docs/MAP_TEXTURE_REGISTRATION.md)
+- [Foresight眼位底图试用与记录交接](docs/WARD_TERRAIN_LIVE_HANDOFF.md)
 
 这些功能不自动认证全地图精度、可插眼性或实战投影，不将全知录像位置发送到游戏覆盖层。
 

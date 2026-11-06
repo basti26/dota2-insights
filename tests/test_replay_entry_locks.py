@@ -31,6 +31,12 @@ class EntryLockTests(unittest.TestCase):
                 archive.parse_archive(Path('700000001.dem'),Path('unwritten'),archive.ArchiveOptions())
             probe.assert_not_called()
 
+    def test_stationary_landmark_entry_refuses_sealed_path_before_game_and_dependencies(self):
+        from dota2_insights import replay_landmarks as tool
+        with patch.object(tool,'_windows_dota_running') as game,patch.object(tool.importlib.metadata,'version') as version:
+            with self.assertRaisesRegex(ValueError,'封存'):tool.extract_landmarks(Path('700000001.dem'))
+            game.assert_not_called();version.assert_not_called()
+
     def test_disguised_sealed_footer_refused_before_full_hash_or_parser_import(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);source=root/'generated.dem';source.write_bytes(b'generated, no actual demo')

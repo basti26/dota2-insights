@@ -71,6 +71,8 @@ def main():
     from dota2_insights import replay_packet_diagnostics
     failure_packets = replay_packet_diagnostics.attach(parser, ReplayDataError)
     extractor = WardsExtractor()
+    from dota2_insights.replay_height import WardHeightCapture
+    height_capture=WardHeightCapture(extractor)
     extractor.attach(parser)
     context_collector=None
     from dota2_insights.replay_postgame_context import Collector,ContextLimit,write_context
@@ -118,6 +120,7 @@ def main():
     rows = []
     for ward in wards:
         row = asdict(ward)
+        row.update(height_capture.for_event(ward))
         if row.get('placer') and not row['placer'].startswith('npc_dota_hero_'):
             row['placer'] = None
         if row.get('killer') and not row['killer'].startswith(('npc_dota_', 'dota_')):
@@ -158,6 +161,8 @@ def main():
             'Expiry/kill classification follows the pinned extractor, including its lifespan assumptions.',
             'Unobserved ends remain unknown; replay end is right-censoring, not a ward death.',
             'No player account IDs, names, chat or unrestricted entity dump is exported.']}
+    manifest['height_capture']=height_capture.summary()
+    manifest['height_adapter_sha256']=sha256_file(ROOT/'dota2_insights/replay_height.py')
     if context_collector is not None:
         context=context_collector.finish(parser,complete=manifest['complete'])
         context['source_sha256']=source_sha

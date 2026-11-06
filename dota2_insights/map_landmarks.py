@@ -16,9 +16,12 @@ def xyz(text):
     return result
 
 
-def extract(text):
+def extract(text, *, include_towers=False):
     if not isinstance(text,str) or len(text.encode('utf-8'))>32*1024**2 or '<!-- kv3 encoding:text:' not in text:
         raise ValueError('landmark_export_invalid')
+    if type(include_towers) is not bool:
+        raise ValueError('landmark_tower_flag_invalid')
+    selected = LANDMARKS | ({'npc_dota_tower'} if include_towers else set())
     blocks=VALUES.findall(text)
     if not blocks or len(blocks)>20000:
         raise ValueError('landmark_entity_count_invalid')
@@ -27,7 +30,7 @@ def extract(text):
         names=CLASS.findall(block)
         if len(names)!=1:raise ValueError('landmark_class_invalid')
         name=names[0]
-        if name not in LANDMARKS|{'dota_minimap_boundary','world_bounds'}:continue
+        if name not in selected|{'dota_minimap_boundary','world_bounds'}:continue
         origins=ORIGIN.findall(block)
         if len(origins)!=1:raise ValueError('landmark_origin_missing_or_duplicate')
         targets=re.findall(r'^\t{5}targetname = "([^"\r\n]*)"$',block,re.M)

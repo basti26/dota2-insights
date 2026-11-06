@@ -1,0 +1,33 @@
+# 眼位参考包原始高度扩展 v1
+
+2026-11-06。historical_ward_reference顶层schema_version仍为1；本扩展是可选数据，旧包无需补写。两仓独立实现，不相互import源码。
+
+## 来源与字段
+
+新点位可带height_observation，逐字保留replay_raw_height_v1的白名单含义：version、status、components、raw_z、coordinate_basis、centered_transform_verified=false、ground_height_verified=false。
+
+components只含CBodyComponent.m_cellZ和CBodyComponent.m_vecZ。记录成功时raw_z=cellZ*128+vecZ；cellZ为非负整数，vecZ为有限数字，允许超过128，不能私自归一化。0有效，bool不当数字。缺失/无效保持null和明确status，不填0；成功声明、坐标基、分量与数值不一致时拒收。
+
+height_source固定四字段：ward_index、entity_index、entity_serial、association。association必须为same_native_placement_event_and_entity_callback；点ID必须等于<match_id>:<ward_index>，序号在source_ward_count内。源序号保留原wards.json位置，即使前面有不可绘制点被跳过，也不重新编号。实体index/serial不是英雄身份或永久对象ID。
+
+顶层保留source_replay_sha256、source_wards_sha256，并增加height_adapter_sha256；有高度时必须均为有效SHA256。该SHA绑定数据与生产代码来源，但Foresight不持有原始录像/wards.json时只核对包内一致性，不伪称独立复验了原录像。
+
+Insights只从已通过完整解析、独立footer身份和源wards字节SHA/大小检查的比赛构建正式参考包。短前缀仍不能通过build完整性条件；本扩展没有新放行入口或后台重解析任务。
+
+## 两端行为
+
+Insights ward_reference_export构建点位时检查原生高度关联及来源并白名单导出；旧资料没有高度时继续导出原点位，不推断地面、砍树要求或版本。
+
+Foresight load_packet严格验证可选高度，usage_count处理后仍保留原始字段。当前projected_markers、WardTerrain和附近估算仍使用既有平面坐标；新增Z不会移动屏幕落点。不能把raw_z直接减成屏幕Y，更不能把读取成功叫作三维贴地验证。后续三维相机模型必须明确原始坐标转换、镜头假设和高度语义。
+
+map_version目前仍unknown；不会因为Z可读取就把历史比赛地图版本认证为当前安装地图。没有height_observation意味着高度未知；不是零高度。
+
+## 本机互通证据
+
+Insights diagnostics/ward-height-contract-20261106/reference.json为专门生成的两点协议夹具，一点有原始Z、另一点缺分量；不是真实比赛，不是由短前缀冒充完整比赛，也未安装为活动眼位包。source-manifest和README明确生成用途。
+
+独立Foresight进程用生产load_packet读取成功，原始Z=16384与缺失null均保留，来源序号保留，usage_count可继续计算；与删去高度字段的同包相比，生产平面投影结果完全相同。Foresight diagnostics/ward-height-contract-20261106/acceptance.json保存结果与来源/消费模块SHA。本机config未改，旧EXE未重建。
+
+新增检查覆盖未知值、原始Z保留、数学不一致、bool冒充0、未验证标志类型、缺摘要与跨序号来源拒收。离线测试和夹具互通不认证真实贴地或完整重叠，实战仍沿用自然对局自动记录。
+
+最终回归：1753项Foresight与1017项Insights全量离线检查通过，0失败/错误/跳过/后台异常，当前执行源码与互通夹具SHA复验一致。对应收据见本机diagnostics/ward-height-contract-20261106/verification.json。

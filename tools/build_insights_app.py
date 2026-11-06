@@ -16,6 +16,7 @@ from dota2_insights.portable_app import digest, public_locks
 
 NAME, VERSION = 'Dota2Insights', '0.1.0'
 UI_MODULES = ('__init__', 'portable_app', 'history', 'scrollable_panel', 'replay_archive',
+    'replay_height',
     'replay_workbench', 'replay_runtime', 'replay_holdout', 'portable_replay',
     'replay_visibility_recording', 'replay_phase_evidence', 'replay_death_semantics',
     'replay_periods', 'replay_fact_review')
