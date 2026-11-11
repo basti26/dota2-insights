@@ -13,6 +13,29 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProjectBoundaryTests(unittest.TestCase):
+    def test_repository_ships_empty_hold_templates_and_mit_license(self):
+        for name in ('data/validation-locks.json', 'config/validation-locks.example.json'):
+            value = json.loads((ROOT / name).read_text(encoding='utf-8'))
+            self.assertEqual(value, {'schema_version': 1, 'heldout_matches': []})
+        license_text = (ROOT / 'LICENSE').read_text(encoding='utf-8')
+        self.assertIn('MIT License', license_text)
+        self.assertIn('Permission is hereby granted', license_text)
+
+    def test_self_check_json_survives_ascii_stdout_without_local_dependencies(self):
+        import io
+        from unittest.mock import patch
+        from tools import win_insights
+        raw = io.BytesIO()
+        output = io.TextIOWrapper(raw, encoding='ascii')
+        expected = {'passed': True, 'dependency': '缺少可选解析依赖'}
+        with patch.object(sys, 'argv', ['win_insights.py', '--self-check']), \
+                patch.object(sys, 'stdout', output), \
+                patch.object(win_insights, 'self_check', return_value=expected):
+            self.assertEqual(win_insights.main(), 0)
+        output.flush()
+        self.assertEqual(json.loads(raw.getvalue()), expected)
+        output.detach()
+
     def test_missing_history_configuration_is_optional(self):
         with TemporaryDirectory() as folder:
             self.assertEqual(history_roots(Path(folder) / 'missing.json'), {})

@@ -43,7 +43,8 @@ def main():
     if args.check_ui:
         parser.error('--check-ui requires --offline-self-check')
     if args.self_check:
-        print(json.dumps(self_check(), ensure_ascii=False))
+        # Machine-readable output must survive Windows legacy stdout encodings.
+        print(json.dumps(self_check(), ensure_ascii=True))
         return 0
     import tkinter as tk
     from tkinter import messagebox
