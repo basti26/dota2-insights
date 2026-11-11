@@ -13,7 +13,7 @@ from .match_journal_index import history_bases
 from .ward_projection_diagnostics import ProjectionDiagnostics
 
 MAX_BYTES=128*1024**2
-KINDS={'location','surface','waiting','capture_error','surface_error','capture_unavailable','reference_added','native_camera_position'}
+KINDS={'location','surface','waiting','capture_error','surface_error','capture_unavailable','reference_added','native_camera_position','native_camera_orientation'}
 
 
 def _digest(path):
@@ -239,14 +239,16 @@ def review(folder):
                 if key is not None:locations.setdefault(key,[]).append({'line':rows,
                     'status':'experimental_visual_reference' if mini else status,'points':count+mini})
                 statuses[status]+=1
-            if row['kind']=='native_camera_position':
-                from .native_camera_review import validate_position
+            if row['kind'] in {'native_camera_position', 'native_camera_orientation'}:
+                from .native_camera_review import validate_position, validate_orientation
                 if (d['schema_version']!=2 or context is None or row.get('projection_applied') is not False
                         or row.get('frame_id','missing') is not None
                         or row.get('capture_frame_alignment_verified') is not False):
                     raise ValueError('native_camera_event_claim')
-                validate_position(row.get('telemetry'))
-                if counts['native_camera_position']>=128:raise ValueError('native_camera_event_limit')
+                validator = validate_position if row['kind']=='native_camera_position' else validate_orientation
+                validator(row.get('telemetry'))
+                if counts['native_camera_position']+counts['native_camera_orientation']>=128:
+                    raise ValueError('native_camera_event_limit')
             if row['kind']=='surface':
                 if type(row.get('shown')) is not bool or row.get('os_visibility_verified') is not False:
                     raise ValueError('ward_camera_surface_claim')
@@ -288,7 +290,7 @@ def review(folder):
             raise ValueError('ward_camera_source_changed')
     from .native_camera_review import summary as native_summary
     return {'run_id':d['run_id'],'package_id':hashlib.sha256(header).hexdigest(),
-        'native_camera_summary':native_summary(counts['native_camera_position']),
+        'native_camera_summary':native_summary(counts['native_camera_position'], counts['native_camera_orientation']),
         'native_calibration_readiness':{'counts':dict(native_frames),
             'explicit_3d_landmarks_available':False,'capture_frame_alignment_verified':False,
             'calibration_ready':False,'required':['explicit_3d_landmark_to_pixel_correspondences',

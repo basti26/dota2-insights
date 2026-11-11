@@ -116,6 +116,8 @@ class DraftPhaseTests(unittest.TestCase):
         self.assertEqual(flags['valid_rows'], 1)
         self.assertEqual(flags['rows'][0]['line_sha256'], hashlib.sha256(raw).hexdigest())
         self.assertFalse(flags['recommendation_application_verified'])
+        self.assertEqual(review(self.root, self.sid)['diagnostics']['laning_widget_metadata']['status'],
+                         'not_recorded_unknown')  # Later tail is outside this prefix.
 
     def test_calculated_advice_and_ui_application_receipts_are_not_conflated(self):
         self.receipt['view_input'] = {'snapshot': {'session_id': self.sid, 'match_id': '12345', 'phase': 'strategy'},

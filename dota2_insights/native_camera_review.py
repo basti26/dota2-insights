@@ -57,7 +57,67 @@ def validate_snapshot(value):
     elif value.get('candidate') is not None:raise ValueError('native_camera_stale_candidate')
 
 
-def summary(count):
+def validate_orientation(value):
+    """Recompute a non-atomic reported target candidate, never authorize projection."""
+    receipt_keys = ('alt_epoch', 'log_generation', 'log_observed_monotonic',
+        'press_to_log_visible_candidate_ms', 'read_chunk_sha256', 'received_at_utc',
+        'visible_in_read_byte_range', 'exact_log_flush_latency_verified',
+        'game_control_sent', 'capture_frame_alignment_verified')
+    expected = {'kind', 'position_candidate', 'look_at_xyz', 'orientation_candidate',
+        'data_time_utc', 'atomic_pair_verified', 'request_association_verified',
+        'projection_calibrated', 'live_usable', *receipt_keys}
+    if (not isinstance(value, dict) or set(value) != expected
+            or value.get('kind') != 'alt_camera_orientation_candidate_v1'):
+        raise ValueError('native_orientation_version_or_fields')
+    base = validate_position(value['position_candidate'])
+    for key in ('atomic_pair_verified', 'request_association_verified', 'projection_calibrated',
+                'live_usable', 'exact_log_flush_latency_verified', 'game_control_sent',
+                'capture_frame_alignment_verified'):
+        if value[key] is not False:
+            raise ValueError('native_orientation_unverified_claim')
+    if value['data_time_utc'] is not None:
+        raise ValueError('native_orientation_acquisition_claim')
+    validate_position({**base, **{key: value[key] for key in receipt_keys}})
+    if (value['alt_epoch'] != base['alt_epoch'] or value['log_generation'] != base['log_generation']
+            or value['log_observed_monotonic'] < base['log_observed_monotonic']
+            or value['press_to_log_visible_candidate_ms'] < base['press_to_log_visible_candidate_ms']
+            or abs((value['log_observed_monotonic']-base['log_observed_monotonic'])*1000
+                   - (value['press_to_log_visible_candidate_ms']-base['press_to_log_visible_candidate_ms'])) > 1e-5
+            or any(value['visible_in_read_byte_range'][i] < base['visible_in_read_byte_range'][i]
+                   for i in (0, 1))):
+        raise ValueError('native_orientation_receipt_mismatch')
+    target = value['look_at_xyz']
+    if (not isinstance(target, list) or len(target) != 3
+            or any(not _number(x) or abs(x) > 1e7 for x in target)
+            or any(abs(target[i]-base['look_at_xy'][i]) > .1 for i in (0, 1))):
+        raise ValueError('native_orientation_target_mismatch')
+    delta = [target[i]-base['camera_xyz'][i] for i in range(3)]
+    distance = math.hypot(*delta)
+    if distance < .001:
+        raise ValueError('native_orientation_degenerate')
+    expected_derived = {'camera_to_target_distance': distance,
+        'view_direction_unit': [x/distance for x in delta],
+        'downward_pitch_degrees': math.degrees(math.atan2(-delta[2], math.hypot(*delta[:2]))),
+        'yaw_xy_degrees': math.degrees(math.atan2(delta[1], delta[0])),
+        'roll_degrees': None, 'fov_degrees': None, 'viewport': None, 'projection_calibrated': False}
+    derived = value['orientation_candidate']
+    if not isinstance(derived, dict) or set(derived) != set(expected_derived):
+        raise ValueError('native_orientation_geometry_fields')
+    for key in ('camera_to_target_distance', 'downward_pitch_degrees', 'yaw_xy_degrees'):
+        if not _number(derived[key]) or abs(derived[key]-expected_derived[key]) > 1e-6:
+            raise ValueError('native_orientation_geometry_mismatch')
+    unit = derived['view_direction_unit']
+    if (not isinstance(unit, list) or len(unit) != 3
+            or any(not _number(x) or abs(x-expected_derived['view_direction_unit'][i]) > 1e-6
+                   for i, x in enumerate(unit))
+            or any(derived[key] is not None for key in ('roll_degrees', 'fov_degrees', 'viewport'))
+            or derived['projection_calibrated'] is not False):
+        raise ValueError('native_orientation_geometry_claim')
+    return value
+
+
+def summary(count, orientation_count=0):
     return {'position_events':count,'complete_camera_pairs':0,'projection_ready':False,
+            'orientation_candidate_events': orientation_count,
             'camera_acquisition_time_verified':False,'log_flush_latency_verified':False,
             'capture_frame_alignment_verified':False,'world_to_screen_verified':False}

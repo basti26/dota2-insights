@@ -49,7 +49,7 @@ def _admitted_source(relative):
         rf'self-economy/self-economy-{token}/(?:recording-summary\.json|samples\.jsonl)',
         rf'matches/sessions/{run}/(?:recording-summary\.json|context\.jsonl|roster-evidence\.jsonl|buff-samples\.jsonl)',
         rf'matches/match_[1-9][0-9]{{0,19}}/{run}/observations\.jsonl',
-        r'drafts/session_[a-f0-9]{32}/(?:session-end\.json|events\.jsonl|ui-presented\.jsonl|portrait-visibility\.jsonl|chat-candidates\.jsonl|ban-window-candidates\.jsonl)',
+        r'drafts/session_[a-f0-9]{32}/(?:session-end\.json|events\.jsonl|ui-presented\.jsonl|panel-visibility\.jsonl|portrait-visibility\.jsonl|chat-candidates\.jsonl|ban-window-candidates\.jsonl)',
         rf'minimap-learning/{run}/(?:session\.json|samples\.jsonl|capture_attempts\.jsonl|context\.jsonl|markers\.jsonl|rejected\.jsonl)',
         rf'field-visuals/{run}/(?:session\.json|screenshots\.jsonl)',
         rf'match-audio/{token}/(?:summary\.json|segments\.jsonl|reference-gsi\.jsonl)',
@@ -402,7 +402,7 @@ def inspect_registry(root_key, root, registry, *, quiet_seconds=2):
     if draft.get('session_id'):
         component('bp', base / 'drafts' / ('session_' + token(draft['session_id'])),
                   'session-end.json', mode='draft', required=['events.jsonl'],
-                  optional=['ui-presented.jsonl', 'portrait-visibility.jsonl', 'chat-candidates.jsonl', 'ban-window-candidates.jsonl'], ack=draft)
+                  optional=['ui-presented.jsonl', 'panel-visibility.jsonl', 'portrait-visibility.jsonl', 'chat-candidates.jsonl', 'ban-window-candidates.jsonl'], ack=draft)
     local = document.get('local_run_folders') or {}
     if not isinstance(local, dict):
         raise ValueError('handoff_local_run_folders_invalid')

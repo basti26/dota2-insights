@@ -94,6 +94,10 @@ def summarize(package, roots, *, catalogue=None, catalogue_source=None):
     self_audits = defaultdict(SelfEconomyAudit)
     previous = {}
     with ClosedJournals(package, roots) as inputs:
+        from .economy_display_review import summarize_registry
+        economy_display = summarize_registry(inputs.registry(),
+            {m['match_id'] for m in package['matches'] if m['match_id']},
+            started_at_utc=package['started_at_utc'], closed_at_utc=package['closed_at_utc'])
         for component, ref in inputs.journals('own_gsi'):
             for _, row, evidence in inputs.rows(ref):
                 mid = explicit_match(row)
@@ -153,8 +157,14 @@ def summarize(package, roots, *, catalogue=None, catalogue_source=None):
             totals = {'source':ref, 'kind':kind, 'rows':0, 'explicit_match_rows':Counter(),
                 'session_bound_rows':Counter(), 'utc_candidate_rows':Counter(), 'unassigned_reasons':Counter(),
                 'meaning':'UTC candidates are postgame association hints, not identity or causal features'}
+            lane = None
+            if kind == 'bp' and Path(ref['path']).name == 'panel-visibility.jsonl':
+                from .laning_ui_review import LaneWidgetSummary
+                lane = LaneWidgetSummary(Path(ref['path']).parent.name.removeprefix('session_'))
             for _, row, evidence in inputs.rows(ref):
                 totals['rows'] += 1
+                if lane is not None:
+                    lane.add(row, evidence)
                 mid = explicit_match(row)
                 if mid is not None and component.get('declared_match_id') not in (None, mid):
                     raise ValueError('record_component_match_identity_conflict')
@@ -222,6 +232,8 @@ def summarize(package, roots, *, catalogue=None, catalogue_source=None):
                         advice = (row.get('view_input') or {}).get('advice') or {}
                         if name == 'ui-presented.jsonl' and phase == 'selection' and advice.get('candidates'):
                             m['bp_ui_selection_candidate_receipts'] += 1
+            if lane is not None:
+                totals['laning_widget_metadata'] = lane.result()
             shared[source_key] = totals
         for m in content.values():
             m['recognition_ms'] = percentiles(m['recognition_ms'])
@@ -230,6 +242,7 @@ def summarize(package, roots, *, catalogue=None, catalogue_source=None):
         'matches':package['matches'], 'own_gsi':dict(own),
         'own_economy_audit': {mid: audit.result() for mid, audit in self_audits.items()}, 'match_facts':content,
         'item_review_priorities':priorities.result(),
+        'economy_window_requests': economy_display,
         'priority_queue_limit_reached':priorities.at_capacity, 'catalogue_source':catalogue_source,
         'journal_alignment':list(shared.values()), 'source_verified_before_and_after':True,
         'limitations':['No replay, screenshot or audio truth inspected.',
@@ -246,6 +259,13 @@ def render_markdown(reports):
         '没有打开录像、图片或音频核验，以下数量均不是识别准确率。', '']
     for report in reports:
         lines += [f"## {report['launcher_run_id']}", '']
+        window = report.get('economy_window_requests', {})
+        lines += ['经济HUD窗口状态：' + (
+            f"记录{window['transition_count']}次状态变化；原因计数{window.get('reason_transition_counts', {})}；"
+            f"历史达到上限：{window.get('history_limited', False)}。"
+            if window.get('status') == 'recorded_window_requests_only' else
+            '未知，来源未记录；不能解释为零次显示或显示失败。'),
+            '仅代表程序窗口请求，不证明屏幕可见，也不统计显示时长；无明确比赛号的状态不按时间分配。', '']
         for match in report['matches']:
             mid = match['match_id']
             gsi, facts = report['own_gsi'].get(mid, {}), report['match_facts'].get(mid, {})
@@ -253,6 +273,7 @@ def render_markdown(reports):
             lines += [f"### 比赛 {mid or '本地会话'}", '',
                 f"结束证据：{match['match_end_evidence']}",
                 f"本人GSI：{gsi.get('rows', '未知')}行；金额可用{gsi.get('available_rows', '未知')}行。",
+                f"经济HUD状态变化（仅明确本比赛号）：{window.get('by_explicit_match', {}).get(mid, '未知/未记录')}；不与GSI行数或显示时长等同。",
                 f"本人英雄：{', '.join(gsi.get('heroes', {})) or '未知'}",
                 f"金额分项加总不一致：{gsi.get('arithmetic_disagreement_count', '未知')}（可比分项记录{gsi.get('arithmetic_comparable_rows', '未知')}）；相邻5秒内下降至少500：{gsi.get('large_decrease_count', '未知')}。下降不是识别错误判定。",
                 f"GSI估值状态：{dict(gsi.get('economy_status', {}))}",
@@ -273,6 +294,13 @@ def render_markdown(reports):
             '| 通道/文件 | 总行数 | 显式比赛号 | 显式会话/比赛目录 | UTC候选 | 未分配 |', '|---|---:|---|---|---|---|']
         for j in report['journal_alignment']:
             lines.append(f"| {j['kind']}/{Path(j['source']['path']).name} | {j['rows']} | {dict(j['explicit_match_rows'])} | {dict(j['session_bound_rows'])} | {dict(j['utc_candidate_rows'])} | {dict(j['unassigned_reasons'])} |")
+        from .laning_ui_review import summary_text
+        lane_sources = [j for j in report['journal_alignment'] if 'laning_widget_metadata' in j]
+        lines += ['', '### 对线页控件元数据', '']
+        if not lane_sources:
+            lines.append('对线页元数据未知：本包没有已准入的相应来源，不解释为零次使用。')
+        for j in lane_sources:
+            lines.append(f"- 来源 `{j['source']['path']}`：{summary_text(j['laning_widget_metadata'])}")
         lines += ['', '### 大件复查优先队列', '',
             '价格仅用随仓库保留的目录排序，不能当当前补丁价格认证。候选名不是物品真值；重复观测合并计数不作为独立错误。分差阈值0.12只用于离线挑样，不修改在线识别。', '',
             '| 比赛 | 英雄 | 格 | 候选物品 | 目录价格 | 原因 | 重复观测 | 原日志行 |',

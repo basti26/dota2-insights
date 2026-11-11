@@ -1,3 +1,21 @@
+2026-11-12 Pi真实本人录像只读复核：先运行Helper有界同步；受限执行遇瞬时独占锁冲突，未删锁，正常权限同步通过。随后按配置接收端指纹与显式比赛9085574435检查封存锁，仅通过既有严格SSH连接查询这一比赛。Pi当前91124714字节DEM SHA与Windows本地/接收回执一致；catalog下载verified、解析complete，完成清单match/source SHA正确、complete=true、stop_reason=replay_eof、无parse_error，wards原字节摘要与清单一致，读取前后原文件稳定。没有下载或重跑解析、没有读其他比赛结果；未认证解析语义准确率。证据diagnostics/replay-service-20261112/pi-match-recheck.json，Windows最终复核见对端latest-end-to-end-recheck.json。本轮无运行源码变更，无需重复测试或部署。
+
+2026-11-12 双方对线元数据接收：保留旧7字段，新增可选成对己方选择/提示覆盖字段组成9字段格式；各最多5、去重且双方无交集，ready/not_selected与双方选择一致，非ready提示覆盖为空。己方计数/名单单列，旧记录未包含时为null/未知；文字状态去重包含己方范围，仍非阅读次数或身份真值。助手当前安装128资源核验后生成3种合成上下文，以版本化JSON/SHA独立接收通过（diagnostics/allied-laning-interop-20261112，SHA=072ebcc564f4030e1ab117e9d2e914cf97d8fb9bbd8439d27ca0172409cc9f3c）。当前完整1068项Insights离线回归通过（run-c19935d47793），0失败/错误/跳过/后台异常、源码稳定；对端助手1909项完整通过（run-149dbee36301）。无新真实历史读取/采集/外网；自然记录与完整对线建议质量仍待验收。
+
+2026-11-12 被动完整镜头方向候选接收：新增native_camera_orientation事件的独立字段/接收代次与Alt epoch/时刻差/字节范围/目标XY检查，重算距离、单位向量、俯仰与朝向；FOV/roll/viewport与原子采样、截图对应、实时投影仍不认证。位置与方向事件共享128条预算，摘要单列方向候选，不叠加位置或认定完整镜头。48项相关离线回归通过（run-99a3485f31b2）；助手生产解析器/写入器生成的2事件合成闭合包经原字节SHA交换独立接收/退出核验通过（diagnostics/native-orientation-interop-20261112/result-v1.json）。先执行sync_helper_records --latest 1，最新运行索引仍waiting；未据其他通道就绪放行其相机载荷，也未读取新真实相机图片。现有真实方向采样及地标像素真值缺口仍未完成，未操作游戏/设备/外网。协议docs/PASSIVE_CAMERA_ORIENTATION_V1.md。
+
+2026-11-12 当前Insights完整离线回归：1065项通过，0失败/错误/跳过/后台异常，runner无异常，源码进出稳定（diagnostics/offline-tests/run-a43ed51fdc5d/result.json）。覆盖当前新增对线控件与经济窗口请求解析、闭合来源进出校验及已有离线链路；不能证明实战准确率或屏幕可见。本轮无新代码失败，无真实历史重跑/设备/外网启动；自然闭合资料接收与实际功能效果仍待完成。对端助手1897项完整离线回归通过（run-6ec99f8c5354），跨项目不导入源码。
+
+2026-11-12 经济HUD窗口状态接收完成：独立解析可选运行索引扩展，ClosedJournals新增仅限已准入source_registry的大小/SHA/路径约束读取，分析进入/退出仍复验完整包。最多128条变化、布尔/原因/字段/时间/最新状态一致性及封存/明确比赛集合检查，缺字段保持未知，未知比赛不按UTC归属。JSON/Markdown按运行及明确比赛给出窗口请求原因变化，与本人金额可用行数并列但不当同帧/因果/时长/阅读证明。76项接收/内容/BP相关离线回归通过（run-9e6a11bacef1），0失败/错误/跳过/后台异常、源码稳定。当前Foresight写入器生成3次去重变化的合成JSON，经版本化文件/SHA交换独立解析通过（diagnostics/economy-display-interop-20261112，input SHA=97567deff1949eaf69887ca54c3daa09398ddb0c4ed61da745793a7dc72ba1ef）。协议docs/ECONOMY_WINDOW_STATUS_V1.md；未读新自然数据或启动游戏/采集/外网，真实屏幕验收仍待完成。
+
+2026-11-11 对线页元数据独立统计：Insights不导入助手代码，独立检查v1可选扩展、来源会话、控件状态、有限视口、包/文字摘要及白名单字段；旧记录无扩展保持unknown/null，滚动变化不增加不同ready文字状态，也不冒充阅读或建议质量。完整闭合BP会话接收白名单补入panel-visibility，ClosedJournals按原包SHA进入/退出复验；前缀仍只消费截止字节。JSON和Markdown已输出来源范围内摘要。88项相关离线测试通过（run-d8cf3cc7083b），0失败/错误/跳过/后台异常、源码稳定；四状态模拟数据跨仓库文件交换与SHA进出核对通过（diagnostics/laning-interop-20261111）。未读取新自然资料或认证屏幕/对位身份，待新闭合对局验收。
+
+2026-11-11 新大件疑点取证：从已固定包SHA、比赛及记录会话的最新装备记录准备6张原图SHA校验的槽位裁剪，读取前后复验。可见一张tooltip文字遮挡及一组亮图标/冷却数字对照；未将候选名称、疑点数量或像素校验当作身份/准确率真值，未写训练标签、未改运行阈值。材料在diagnostics/recent-audit-20261111/equipment-priority-crops/。
+
+2026-11-11 修复后自然记录复验：先重新同步最新封存，再分别调用draft_phase_handoff.review和observation_handoff.review，以索引包SHA及绑定身份进入/退出复验。新装备包338条、流程接受200条；BP公开英雄最多8位、候选事件4条、选人候选UI回执0条。表明识别重新产出，不将接受比例当准确率或宣称推荐已被看到。证据diagnostics/recent-audit-20261111/after-repair-bp-equipment.json；未解码新图片、重解析录像或联网。此前最近八次记录的停止现象保留为修复前事实，不再代表这份新记录。
+
+2026-11-11 最近记录通查：修正改名后的本机历史根目录，按协议重新同步最近8次运行，7份整次封存可读、1份等待；独立GSI/装备/BP/小地图/音频/性能逐通道重验，缺文件包保持拒收。最近图像经济无产出、部分BP无公开英雄/候选，不能以GSI接收成功宣称识别恢复；眼位预算耗尽、性能交接告警和record-only音频分开报告。完整本机报告及局限保存在diagnostics/record-content/20261111T121038467592Z/REPORT.md与diagnostics/recent-audit-20261111/findings.json；本轮无新实战、无录像重解析或联网。
+
 2026-11-06 提交前完整离线回归：1056项通过，0失败/错误/跳过，源码检查前后未变。测试禁止真实采集与外网；本次推送不构建EXE，实机投影精度仍待校准。
 
 2026-11-06 源码更新：补齐地图窗口/平移/纹理/渲染几何开发评估、显式兼容声明、录像及眼位高度来源，与Foresight通过版本化数据包交接，不跨仓导入源码。

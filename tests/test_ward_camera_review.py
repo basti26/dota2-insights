@@ -7,6 +7,48 @@ from dota2_insights.ward_camera_review import review,discover_and_review
 
 
 class WardCameraReviewTests(unittest.TestCase):
+    def orientation_event(self):
+        import math
+        event=self.native_event();base=event['telemetry']
+        target=[*base['look_at_xy'],149.22257]
+        delta=[target[i]-base['camera_xyz'][i] for i in range(3)];distance=math.hypot(*delta)
+        keys=('alt_epoch','log_generation','log_observed_monotonic','press_to_log_visible_candidate_ms',
+            'read_chunk_sha256','received_at_utc','visible_in_read_byte_range',
+            'exact_log_flush_latency_verified','game_control_sent','capture_frame_alignment_verified')
+        value={k:base[k] for k in keys}
+        value.update(kind='alt_camera_orientation_candidate_v1',position_candidate=base,look_at_xyz=target,
+            orientation_candidate={'camera_to_target_distance':distance,
+                'view_direction_unit':[x/distance for x in delta],
+                'downward_pitch_degrees':math.degrees(math.atan2(-delta[2],math.hypot(*delta[:2]))),
+                'yaw_xy_degrees':math.degrees(math.atan2(delta[1],delta[0])),
+                'roll_degrees':None,'fov_degrees':None,'viewport':None,'projection_calibrated':False},
+            data_time_utc=None,atomic_pair_verified=False,request_association_verified=False,
+            projection_calibrated=False,live_usable=False)
+        event['kind']='native_camera_orientation';event['telemetry']=value
+        return event
+
+    def test_orientation_is_independently_recomputed_not_a_complete_camera_certificate(self):
+        self.native_header();self.save_events([self.orientation_event()])
+        result=review(self.run)['native_camera_summary']
+        self.assertEqual(result['orientation_candidate_events'],1)
+        self.assertEqual(result['position_events'],0)
+        self.assertEqual(result['complete_camera_pairs'],0)
+        self.assertFalse(result['world_to_screen_verified'])
+        self.assertFalse(result['capture_frame_alignment_verified'])
+
+    def test_orientation_bad_geometry_epoch_or_claims_are_rejected(self):
+        self.native_header()
+        for change in ('pitch','target','epoch','fov','atomic','source'):
+            event=self.orientation_event();v=event['telemetry']
+            if change=='pitch':v['orientation_candidate']['downward_pitch_degrees']+=5
+            elif change=='target':v['look_at_xyz'][0]+=1
+            elif change=='epoch':v['alt_epoch']+=1
+            elif change=='fov':v['orientation_candidate']['fov_degrees']=70
+            elif change=='atomic':v['atomic_pair_verified']=True
+            else:v['position_candidate']['live_usable']=True
+            self.save_events([event])
+            with self.subTest(change=change),self.assertRaises(ValueError):review(self.run)
+
     def test_sampling_policy_remains_declared_not_false_fixed_interval(self):
         self.header.update(schema_version=2,image_format='jpeg',jpeg_quality=90,
             native_image_dimensions_preserved=True,image_sampling_policy='window_triplet',

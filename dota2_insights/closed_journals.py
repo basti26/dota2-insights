@@ -67,6 +67,28 @@ class ClosedJournals:
                 if ref['content_kind'] == 'jsonl':
                     yield component, ref
 
+    def registry(self):
+        """Read only the admitted registry inside the entry/exit verification scope."""
+        if not self.active:
+            raise ValueError('record_verified_context_required')
+        ref = self.package['source_registry']
+        if ref not in self.package['sources'] or ref['content_kind'] != 'json':
+            raise ValueError('record_registry_not_admitted')
+        root = Path(self.roots[ref['root_key']]).resolve()
+        path = (root / ref['path']).resolve()
+        if not path.is_relative_to(root):
+            raise ValueError('record_registry_outside_history')
+        from .minimap.offline_io import check_input_paths
+        from .helper_handoff import META_LIMIT, _json
+        check_input_paths(path)
+        if type(ref['bytes']) is not int or not 0 <= ref['bytes'] <= META_LIMIT:
+            raise ValueError('record_registry_size_limit')
+        with path.open('rb') as stream:
+            raw = stream.read(META_LIMIT + 1)
+        if len(raw) != ref['bytes'] or hashlib.sha256(raw).hexdigest() != ref['sha256']:
+            raise ValueError('record_registry_changed')
+        return _json(raw)
+
     def rows(self, ref):
         if not self.active:
             raise ValueError('record_verified_context_required')

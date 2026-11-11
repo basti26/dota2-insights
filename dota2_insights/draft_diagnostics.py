@@ -80,8 +80,10 @@ def _stage_timing(events, applications):
 
 
 class DraftDiagnostics:
-    def __init__(self):
+    def __init__(self, *, expected_session=None):
         self.events, self.ui, self.visibility = [], [], []
+        from .laning_ui_review import LaneWidgetSummary
+        self.laning = LaneWidgetSummary(expected_session)
 
     def add(self, name, line, row, evidence):
         from .draft_advice_audit import audit
@@ -90,6 +92,7 @@ class DraftDiagnostics:
         if len(self.events) + len(self.ui) + len(self.visibility) >= 20000:
             raise ValueError('draft_diagnostics_row_budget')
         if name == 'panel-visibility.jsonl':
+            self.laning.add(row, {'line': line, 'line_sha256': evidence['line_sha256']})
             required = ('session_id', 'revision', 'phase', 'advice_stage', 'visible', 'expanded',
                         'reason', 'observed_at_utc', 'written_at_utc')
             observed, written = _stamp(row.get('observed_at_utc')), _stamp(row.get('written_at_utc'))
@@ -184,6 +187,7 @@ class DraftDiagnostics:
         return {'events': self.events, 'ui_application_evidence': matches,
             'stage_timing': _stage_timing(self.events, matches),
             'panel_visibility_evidence': visibility,
+            'laning_widget_metadata': self.laning.result(),
             'selection_events': len(selection),
             'selection_events_with_conflicts': sum(bool(e['conflicted_slots']) for e in selection),
             'selection_wait_messages': dict(Counter(e['message'] or 'unknown' for e in selection if not e['candidate_count'])),
@@ -234,4 +238,11 @@ def render_markdown(reports):
         lines.append(f"| {report.get('effective_match_id') or report['session_id']} | {state} | {counts} | "
                      f"{v.get('recorded_reason_counts', {}) if present is True else '未知'} | "
                      f"{v.get('end_phase_explicit_bp_shown_lines', []) if present is True else '未知'} |")
+    from .laning_ui_review import summary_text
+    lines += ['', '### 对线页元数据', '',
+        '仅统计本包范围内的控件状态，不把滚动次数当阅读次数；前缀截止后尾部不包含在此。', '']
+    for report in reports:
+        lane = (report.get('diagnostics') or {}).get('laning_widget_metadata')
+        if lane is not None:
+            lines.append(f"- {report.get('effective_match_id') or report['session_id']}：{summary_text(lane)}")
     return '\n'.join(lines) + '\n'

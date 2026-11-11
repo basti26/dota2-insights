@@ -170,7 +170,10 @@ class HandoffTests(unittest.TestCase):
         summary = {'session_id': sid, 'closed_at_utc': '2026-10-25T09:59:00Z', 'recording': {'closed': True}}
         self.write(folder / 'session-end.json', summary)
         (folder / 'events.jsonl').write_text(json.dumps({'snapshot': {'match_id': '12345'}}) + '\n', encoding='utf-8')
+        (folder / 'panel-visibility.jsonl').write_text('{}\n', encoding='utf-8')
         self.assertEqual(next(c for c in self.inspect()['components'] if c['kind'] == 'bp')['state'], 'closed_verified')
+        component = next(c for c in self.inspect()['components'] if c['kind'] == 'bp')
+        self.assertTrue(any(ref['source']['path'].endswith('/panel-visibility.jsonl') for ref in component['journals']))
         summary['session_id'] = 'f' * 32
         self.write(folder / 'session-end.json', summary)
         self.assertEqual(next(c for c in self.inspect()['components'] if c['kind'] == 'bp')['state'], 'blocked')

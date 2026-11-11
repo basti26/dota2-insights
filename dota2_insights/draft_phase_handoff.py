@@ -161,7 +161,7 @@ def open_rows(root, session, *, expected_package_id=None, expected_binding_packa
 def review(root, session, *, expected_package_id=None, expected_binding_package_id=UNSPECIFIED):
     from collections import Counter
     from .draft_diagnostics import DraftDiagnostics
-    diagnostics = DraftDiagnostics()
+    diagnostics = DraftDiagnostics(expected_session=session)
     counts, event_phases, ui_phases = Counter(), Counter(), Counter()
     candidates = ui_candidates = ui_without_snapshot = 0
     with open_rows(root, session, expected_package_id=expected_package_id,

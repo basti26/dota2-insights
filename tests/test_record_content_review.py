@@ -81,6 +81,26 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(own['arithmetic_disagreement_count'],1)
         self.assertTrue(result['source_verified_before_and_after'])
 
+    def test_closed_lane_source_reaches_summary_without_time_guessing_match(self):
+        from test_laning_ui_review import row
+        f = self.fixture(); sid = 'a'*32
+        f.document['recorders']['draft_recording'] = {'session_id': sid, 'closed': True}
+        f.write(f.registry, f.document)
+        folder = f.history / 'drafts' / ('session_' + sid)
+        f.write(folder / 'session-end.json', {'session_id': sid, 'closed_at_utc': '2026-11-11T00:00:02Z',
+            'recording': {'closed': True}})
+        self.write_rows(folder / 'events.jsonl', [{'snapshot': {'session_id': sid, 'match_id': '12345'}}])
+        other = row(); other['session_id'] = 'b'*32
+        self.write_rows(folder / 'panel-visibility.jsonl', [row(), other])
+        package = f.inspect()
+        result = review.summarize(package, f.roots)
+        source = next(j for j in result['journal_alignment'] if 'laning_widget_metadata' in j)
+        self.assertEqual(source['laning_widget_metadata']['recorded_state_counts'], {'ready': 1})
+        self.assertEqual(source['laning_widget_metadata']['invalid_rows'], 1)
+        self.assertEqual(source['explicit_match_rows'], {})
+        self.assertTrue(result['source_verified_before_and_after'])
+        self.assertIn('不是阅读次数', review.render_markdown([result]))
+
     def test_reported_net_worth_not_compared_with_partial_components(self):
         f = self.fixture()
         self.write_rows(f.journal,[self.gsi_row(9999,status='reported')])
