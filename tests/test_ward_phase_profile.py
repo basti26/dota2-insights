@@ -29,11 +29,12 @@ def stratum(d, phase=0, team=2, kind='observer'):
 
 class WardPhaseProfileTests(unittest.TestCase):
     def test_partial_success_excluded_from_both_numerator_and_denominator(self):
-        d = analyze([source(entries=[{'placed_game_time_s': 700}, {'placed_game_time_s': 710}]),
-                     source('9876543211', 900, [{'placed_game_time_s': 720}])])
+        d = analyze([source(entries=[{'placed_game_time_s': 600}, {'placed_game_time_s': 710}], map_version='m1'),
+                     source('9876543211', 960, [{'placed_game_time_s': 720}], map_version='m1')])
         s = stratum(d, 1)
         self.assertEqual(s['full_match_ids'], ['9876543210'])
         self.assertEqual(s['partial_match_ids_reference_only'], ['9876543211'])
+        self.assertEqual(s['frequency_match_ids'], ['9876543210'])
         self.assertEqual(s['placements_full'], 2)
         self.assertEqual(s['placements_partial_reference_only'], 1)
         h = s['hotspots'][0]
@@ -41,7 +42,7 @@ class WardPhaseProfileTests(unittest.TestCase):
         self.assertEqual(h['support_match_ids'], ['9876543210'])
 
     def test_matches_without_wards_still_in_full_denominator(self):
-        d = analyze([source(entries=[{}, {}]), source('9876543211', entries=[])])
+        d = analyze([source(entries=[{}, {}], map_version='m1'), source('9876543211', entries=[], map_version='m1')])
         h = stratum(d)['hotspots'][0]
         self.assertEqual(h['match_fraction'], .5)
         self.assertEqual(h['full_matches'], 2)
@@ -50,6 +51,7 @@ class WardPhaseProfileTests(unittest.TestCase):
         d = analyze([source(duration=300, entries=[{}, {}])])
         s = stratum(d)
         self.assertEqual(s['full_match_ids'], [])
+        self.assertEqual(s['frequency_match_ids'], [])
         self.assertEqual(s['hotspots'], [])
         self.assertEqual(s['placements_partial_reference_only'], 2)
 
@@ -64,13 +66,40 @@ class WardPhaseProfileTests(unittest.TestCase):
         self.assertEqual(d['excluded']['at_or_after_match_end'], 1)
 
     def test_team_type_and_producer_cohorts_do_not_mix(self):
-        d = analyze([source(entries=[{}, {}, {'team': 3}, {'ward_type': 'sentry'}]),
-                     source('9876543211', parser_version='different')])
+        d = analyze([source(entries=[{}, {}, {'team': 3}, {'ward_type': 'sentry'}], map_version='m1'),
+                     source('9876543211', parser_version='different', map_version='m1')])
         self.assertEqual(len(d['cohorts']), 2)
         hotspots = [h for s in d['strata'] for h in s['hotspots']]
         self.assertEqual(len(hotspots), 1)
         self.assertEqual(hotspots[0]['support_matches'], 1)
         self.assertEqual(hotspots[0]['placements'], 2)
+
+    def test_unknown_versions_keep_separate_match_hotspots_without_frequency(self):
+        d = analyze([source(entries=[{}, {}]), source('9876543211', entries=[{}, {}], map_version='unknown')])
+        self.assertEqual(len(d['cohorts']), 2)
+        groups = [s for s in d['strata'] if s['hotspots']]
+        self.assertEqual(len(groups), 2)
+        for group in groups:
+            self.assertEqual(group['frequency_match_ids'], [])
+            self.assertEqual(len(group['full_match_ids']), 1)
+            h = group['hotspots'][0]
+            self.assertIsNone(h['match_fraction'])
+            self.assertEqual(h['support_match_ids'], group['full_match_ids'])
+
+    def test_unknown_team_excludes_affected_type_and_phase_from_both_team_rates(self):
+        d = analyze([source(entries=[{'placed_game_time_s': 600}, {'placed_game_time_s': 700}], map_version='m1'),
+                     source('9876543211', entries=[{'placed_game_time_s': 650},
+                         {'placed_game_time_s': 680, 'team': None}], map_version='m1')])
+        for team in (2, 3):
+            s = stratum(d, 1, team)
+            self.assertEqual(s['full_match_ids'], ['9876543210', '9876543211'])
+            self.assertEqual(s['frequency_match_ids'], ['9876543210'])
+            self.assertEqual(s['unattributable_full_match_ids'], ['9876543211'])
+        self.assertEqual(stratum(d, 1)['hotspots'][0]['match_fraction'], 1.0)
+        self.assertEqual(stratum(d, 1)['hotspots'][0]['placements'], 2)
+        self.assertEqual(len(stratum(d, 1, kind='sentry')['frequency_match_ids']), 2)
+        self.assertEqual(len(stratum(d)['frequency_match_ids']), 2)
+        self.assertIsNone(d['unassigned_team'][0]['team'])
 
     def test_bad_time_team_and_coordinates_not_counted(self):
         d = analyze([source(entries=[{'team': None}, {'team': True},

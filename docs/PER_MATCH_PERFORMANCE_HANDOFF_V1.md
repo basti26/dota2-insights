@@ -1,5 +1,11 @@
 # 单局性能采集交接 v1
 
+音频工作可选扩展：性能上下文audio_workload_qpc最多两项，每项包含显式scope及workload_qpc，stage仅允许audio_resample/audio_save，仍须同比赛/双会话、同QPC频率、采样时已结束且完整位于有效游戏窗口。独立核对嵌入的音频来源scope，不继承外层时间来猜归属，也不能把音频stage塞进普通图像workload_qpc绕过绑定。frame_id在音频中是生成的工作单元编号，去重单位不是游戏帧或PCM样本。只读取已封存性能包中的工作耗时声明，不据此放行音频PCM/语义正文；是否有声音、是否命中技能、听审和准确率仍需独立音频准入与证据。重合表示操作调用区间重合，包含I/O等待，不认证CPU因果、音频可闻同步或整局工作覆盖。
+
+识别工作区间可选扩展：已准入的context.jsonl可含workload_qpc（schema_version=1、clock=windows_QueryPerformanceCounter、clock_id/frame_id各32位小写十六进制、正整数frequency_hz/process_id、最多16个阶段spans、非负unmeasured_spans/dropped_spans）。每个span为stage、start_qpc/end_qpc整数和failed布尔；阶段限anchor/hud/hero_ocr/items/upgrades/wallet/frame_total。items包含数量读取，failed表示调用异常而非识别拒收。仍在原open_package进入/退出源SHA复验内消费，不以该字段放行其他通道。
+
+仅接收同比赛、同双会话、前台且新鲜的工作区间。工作记录进程必须与同一已封存采集清单的 `helper_pid` 一致，频率匹配，区间结束不晚于采样 tick，并完整落在有效游戏 QPC 窗口内。按 clock_id/frame_id 去重，重复内容冲突或同 clock_id 进程冲突整组排除。对最多 5 条长帧示例计算提交和显示区间并集与阶段交集，每条示例保留其游戏进程。frame_total 和子阶段不可相加。只有 CSV 表头或窗口内无可归属帧行时，保留上下文窗口，FPS 和重合情况保持未知。上下文只采样最近已处理帧，记录的重合不证明整局覆盖或助手造成掉帧。
+
 Foresight负责PresentMon采集器生命周期，Insights只独立读取数据；不跨仓库导入源码。开关仍使用现有帧率记录配置，未开启不创建监督线程或采集器。本协议不更换PresentMon版本、采样频率或帧率算法。
 
 Windows观察首次仍记录菜单/选人。发现新鲜、明确双会话后绑定范围；同范围POST_GAME到来，监督线程先关闭自有采集器，核实最终退出码、资源关闭、清单发布及ETW诊断，再封存。经济、GSI等其他通道继续运行。下一范围开始新采集器，旧目录不再写。空公开比赛号保留null，不能从旧BP编号回填。

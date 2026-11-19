@@ -1,17 +1,25 @@
 """Bounded discovery and durable references to sealed journals, never copies GSI."""
 from datetime import datetime, timezone
 from contextlib import contextmanager
+import errno
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import sys
 import tempfile
 
-from .history import checked_output
+from .history import checked_output, release_diagnostics, release_record_tail
 from .match_journals import _json, _read, verify
 
 KINDS = ('helper_history', 'helper_releases')
 LAYOUT = 'self-economy/self-economy-*/closed-matches/match_*/game_*'
+MAX_CANDIDATES_PER_SYNC = 128
+REPLACEMENT_CANDIDATES = 2
+
+
+class IndexBusyError(FileExistsError):
+    """An active writer owns the index; not a corrupt source or output collision."""
 
 
 def resolve_reference(reference, roots):
@@ -24,10 +32,9 @@ def resolve_reference(reference, roots):
         raise ValueError('match_journal_reference_invalid')
     parts = path.parts
     if key == 'helper_releases':
-        if (len(parts) != 8 or not parts[0].startswith(('foresight-', 'helper-', 'economy-'))
-                or parts[1] not in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
+        parts = release_record_tail(parts)
+        if parts is None:
             raise ValueError('match_journal_release_layout_invalid')
-        parts = parts[3:]
     if (len(parts) != 5 or parts[0] != 'self-economy' or parts[2] != 'closed-matches'
             or not re.fullmatch(r'self-economy-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', parts[1])
             or not re.fullmatch(r'match_[1-9][0-9]{0,19}', parts[3])
@@ -51,20 +58,18 @@ def history_bases(roots):
         root = Path(roots[key]).resolve(strict=True)
         if not root.is_dir():
             raise ValueError('match_journal_history_unavailable')
-        bases = [root] if key == 'helper_history' else []
-        if key == 'helper_releases':
-            releases = [p for p in root.iterdir() if p.is_dir() and p.name.startswith(('foresight-', 'helper-', 'economy-'))]
-            if len(releases) > 100:
-                raise ValueError('match_journal_release_limit')
-            for release in releases:
-                bases.extend(release / app / 'diagnostics' for app in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy'))
+        bases = [root] if key == 'helper_history' else release_diagnostics(root, limit_error='match_journal_release_limit')
         for base in bases:
             yield key, root, base
 
 
-def discover(roots, *, latest=20):
-    if type(latest) is not int or not 1 <= latest <= 128:
+def _check_latest(latest):
+    if type(latest) is not int or not 1 <= latest <= MAX_CANDIDATES_PER_SYNC:
         raise ValueError('match_journal_scan_limit_invalid')
+
+
+def discover(roots, *, latest=20):
+    _check_latest(latest)
     candidates, seen = [], set()
     for key, root, base in history_bases(roots):
         for folder in base.glob(LAYOUT):
@@ -73,10 +78,14 @@ def discover(roots, *, latest=20):
             lexical = str(folder).casefold()
             if lexical not in seen:
                 seen.add(lexical)
-                candidates.append((folder.stat().st_mtime_ns,
+                marker = folder / 'COMPLETE'
+                published = not marker.is_symlink() and marker.is_file()
+                candidates.append((published, folder.stat().st_mtime_ns,
                     {'root_key': key, 'source': folder.relative_to(root).as_posix()}))
-    # This chooses recent directories, never claims their mtime is game time.
-    return [ref for _, ref in sorted(candidates, key=lambda value: (-value[0], value[1]['source']))[:latest]]
+    # Reserve the bounded window for published candidates first. The marker
+    # only affects discovery order; the verifier still checks all bytes.
+    ordered = sorted(candidates, key=lambda value: (not value[0], -value[1], value[2]['source']))
+    return [ref for _, _, ref in ordered[:latest]]
 
 
 @contextmanager
@@ -89,12 +98,32 @@ def index_destination(project, roots, directory):
         raise ValueError('match_journal_output_overlaps_history')
     output.mkdir(parents=True, exist_ok=True)
     lock = output / 'sync.lock'
-    descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    try:
-        os.close(descriptor)
-        yield output
-    finally:
-        lock.unlink(missing_ok=True)
+    # Kernel ownership ends even after a crash. Never unlink a released lock:
+    # another writer may already hold that inode when the next writer arrives.
+    with lock.open('a+b') as stream:
+        if stream.seek(0, 2) == 0:
+            stream.write(b'0')
+            stream.flush()
+        stream.seek(0)
+        if sys.platform == 'win32':
+            import msvcrt
+            acquire = lambda: msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            release = lambda: msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            acquire = lambda: fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            release = lambda: fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        try:
+            acquire()
+        except OSError as exc:
+            if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                raise
+            raise IndexBusyError('journal_index_sync_busy') from None
+        try:
+            yield output
+        finally:
+            stream.seek(0)
+            release()
 
 
 def write_index(output, index):
@@ -112,9 +141,11 @@ def write_index(output, index):
 
 
 def sync(project, roots, *, latest=20):
+    _check_latest(latest)
+    probe_limit = min(MAX_CANDIDATES_PER_SYNC, latest + REPLACEMENT_CANDIDATES)
     with index_destination(project, roots, 'native-match-handoff') as output:
-        entries, package_ids, duplicates = [], set(), 0
-        for ref in discover(roots, latest=latest):
+        entries, blocked, package_ids, duplicates = [], [], set(), 0
+        for ref in discover(roots, latest=probe_limit):
             try:
                 folder = resolve_reference(ref, roots)
                 manifest, package_id = verify(folder)
@@ -127,11 +158,16 @@ def sync(project, roots, *, latest=20):
                     'record_session_id': manifest['record_session_id'], 'run_id': manifest['run_id'],
                     'rows': manifest['payload']['rows'], 'recording_integrity': manifest['recording_integrity'],
                     'other_channels': 'not_closed_by_this_manifest'})
+                if len(entries) == latest:
+                    break
             except (OSError, ValueError, TypeError, KeyError) as exc:
-                entries.append({**ref, 'state': 'blocked', 'error_type': type(exc).__name__})
+                blocked.append({**ref, 'state': 'blocked', 'error_type': type(exc).__name__})
+        available_slots = latest - len(entries)
+        entries.extend(blocked[:available_slots])
         index = {'schema_version': 1, 'kind': 'native_match_journal_index',
                  'indexed_at_utc': datetime.now(timezone.utc).isoformat(), 'entries': entries,
                  'duplicate_packages_omitted': duplicates,
+                 'blocked_candidates_omitted': max(0, len(blocked) - available_slots),
                  'index_time_is_not_data_time': True}
         write_index(output, index)
         return index

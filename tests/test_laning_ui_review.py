@@ -58,7 +58,9 @@ class LaneReviewTests(unittest.TestCase):
         for item in bad:summary.add(item,{'line':1})
         result=summary.result()
         self.assertEqual(result['invalid_rows'],len(bad))
-        self.assertEqual(result['unique_ready_text_states'],0)
+        self.assertEqual(result['status'],'invalid_metadata_only')
+        self.assertIsNone(result['unique_ready_text_states'])
+        self.assertIn('无法确认当时的控件状态',summary_text(result))
         self.assertEqual(result['declared_package_sha256'],[])
         self.assertNotIn('private',str(result))
 
@@ -68,4 +70,7 @@ class LaneReviewTests(unittest.TestCase):
             item=row();item['laning'].update(advice_status=status,package_sha256=None,tip_hero_ids=[])
             if status=='not_selected':item['laning']['selected_hero_ids']=[]
             summary.add(item,{'line':1})
-        self.assertEqual(summary.result()['recorded_state_counts'],{'loading':1,'unavailable':1,'not_selected':1})
+        result = summary.result()
+        self.assertEqual(result['status'], 'metadata_recorded')
+        self.assertEqual(result['unique_ready_text_states'], 0)
+        self.assertEqual(result['recorded_state_counts'],{'loading':1,'unavailable':1,'not_selected':1})

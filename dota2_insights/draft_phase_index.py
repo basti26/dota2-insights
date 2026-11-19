@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 import re
 
+from .history import release_record_tail
+
 from .match_journal_index import history_bases, index_destination, write_index, read_index as _read_index
 from .draft_phase_handoff import verify
 
@@ -17,10 +19,10 @@ def resolve_reference(reference, roots):
         raise ValueError('draft_index_reference_invalid')
     parts, prefix = path.parts, ()
     if key == 'helper_releases':
-        if (len(parts) != 6 or not parts[0].startswith(('foresight-', 'helper-', 'economy-'))
-                or parts[1] not in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
+        tail = release_record_tail(parts)
+        if tail is None:
             raise ValueError('draft_index_release_layout_invalid')
-        prefix, parts = parts[:3], parts[3:]
+        prefix, parts = parts[:-len(tail)] if tail else parts, tail
     if (len(parts) != 3 or parts[0] != 'drafts' or not re.fullmatch(r'session_[a-f0-9]{32}', parts[1])
             or parts[2] != 'phase-handoff.json'):
         raise ValueError('draft_index_layout_invalid')

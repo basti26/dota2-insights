@@ -23,7 +23,7 @@ class PerformanceHandoffTests(unittest.TestCase):
         self.bound = {'match_id': '12345', 'game_session_id': 'game_'+'a'*32,
                       'record_session_id': 'run_'+'b'*32}
         self.capture = {'schema_version': 1, 'kind': 'presentmon_capture', 'run_id': self.run_id,
-            'source_kind': 'windows', 'complete': True, 'shutdown_complete': True,
+            'source_kind': 'windows', 'complete': True, 'shutdown_complete': True, 'helper_pid': 456,
             'error': None, 'exitcode': 0, 'etw_loss_warning': False, 'presentmon_version': VERSION,
             'binary_sha256': BINARY_SHA256, 'metric_mode': 'v1', 'clock': 'raw_QPC_not_UTC',
             'application_filter': 'dota2.exe', 'context_format': 'configuration_refs_v1', 'qpc_frequency_hz': 1000}
@@ -69,6 +69,61 @@ class PerformanceHandoffTests(unittest.TestCase):
         self.assertFalse(report['observation_shutdown_required'])
         self.assertFalse(game['whole_match_coverage_verified'])
         self.assertFalse(game['assistant_causality_verified'])
+
+    def test_native_workload_repeats_are_reviewed_inside_the_existing_sealed_source_gate(self):
+        workload = {'schema_version': 1, 'clock': 'windows_QueryPerformanceCounter',
+            'clock_id': 'e'*32, 'frame_id': 'f'*32, 'frequency_hz': 1000, 'process_id': 456,
+            'spans': [{'stage': 'items', 'start_qpc': 2700, 'end_qpc': 2800, 'failed': False}],
+            'unmeasured_spans': 0, 'dropped_spans': 0}
+        self.rows[1]['workload_qpc'] = workload
+        self.rows[2]['workload_qpc'] = workload
+        self.write()
+        report = module.review(self.folder, self.package_id)
+        result = report['matches'][0]['workload_overlap']
+        self.assertEqual(result['unique_frame_traces'], 1)
+        self.assertEqual(result['eligible_spans'], 1)
+        overlaps = [s for e in result['long_interval_examples'] for s in e['stages']]
+        self.assertEqual(overlaps, [{'stage': 'items', 'overlap_ms': 100.0, 'recorded_spans': 1, 'failed_spans': 0}])
+        report['also_in_closed_launcher_scope'] = False
+        rendered = module.render_markdown([report], [], index_state='available')
+        self.assertIn('items 100.000ms', rendered)
+        self.assertIn('不作掉帧归因', rendered)
+
+    def test_header_only_and_out_of_window_frames_keep_fps_unknown(self):
+        path = self.capture_folder/'frames.csv'
+        header = path.read_text().splitlines()[0]
+        for tail in ('', 'dota2.exe,42,0x1,5000,10,0,10,0\n'):
+            with self.subTest(tail=bool(tail)):
+                path.write_text(header + '\n' + tail)
+                self.seal()
+                report = module.review(self.folder, self.package_id)
+                game = report['matches'][0]
+                self.assertEqual(game['status'], 'no_attributable_frame_rows')
+                self.assertEqual(game['streams']['streams'], [])
+                self.assertEqual(game['streams']['long_interval_examples'], [])
+                self.assertFalse(game['whole_match_coverage_verified'])
+                self.assertTrue(report['source_verified_before_and_after'])
+
+    def test_game_process_change_keeps_same_named_swapchains_separate(self):
+        path = self.capture_folder/'frames.csv'
+        path.write_text(path.read_text().replace('dota2.exe,42,0x1,4000', 'dota2.exe,43,0x1,4000'))
+        self.seal()
+        game = module.review(self.folder, self.package_id)['matches'][0]
+        self.assertEqual([(s['process_id'], s['row_count']) for s in game['streams']['streams']], [(42, 3), (43, 1)])
+        self.assertEqual([e['game_process_id'] for e in game['workload_overlap']['long_interval_examples']], [43, 42])
+
+    def test_audio_processing_scope_and_timing_survive_the_sealed_performance_context(self):
+        workload = {'schema_version':1, 'clock':'windows_QueryPerformanceCounter',
+            'clock_id':'e'*32, 'frame_id':'f'*32, 'frequency_hz':1000, 'process_id':456,
+            'spans':[{'stage':'audio_resample','start_qpc':2700,'end_qpc':2750,'failed':False}],
+            'unmeasured_spans':0, 'dropped_spans':0}
+        self.rows[1]['audio_workload_qpc'] = [{'scope':dict(self.bound),'workload_qpc':workload}]
+        self.write()
+        report = module.review(self.folder,self.package_id)
+        result = report['matches'][0]['workload_overlap']
+        self.assertEqual(result['eligible_spans'],1)
+        matched = [s for e in result['long_interval_examples'] for s in e['stages']]
+        self.assertEqual(matched,[{'stage':'audio_resample','overlap_ms':50.0,'recorded_spans':1,'failed_spans':0}])
 
     def test_holdout_and_missing_complete_are_rejected_before_source_body(self):
         for heldout in (False, True):

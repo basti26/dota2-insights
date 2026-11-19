@@ -10,6 +10,8 @@ import re
 import time
 import uuid
 
+from .history import release_diagnostics, release_record_tail
+
 META_LIMIT = 512 * 1024
 FILE_LIMIT = 128 * 1024 ** 2
 CSV_LIMIT = 512 * 1024 ** 2
@@ -35,9 +37,7 @@ def _registry_base(root_key, relative):
         raise ValueError('handoff_registry_layout_invalid')
     if root_key == 'helper_history' and not prefix:
         return PurePosixPath('.')
-    if (root_key == 'helper_releases' and len(prefix) == 3
-            and prefix[0].startswith(('foresight-', 'helper-', 'economy-'))
-            and prefix[1] in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') and prefix[2] == 'diagnostics'):
+    if root_key == 'helper_releases' and release_record_tail(prefix) == ():
         return PurePosixPath(*prefix)
     raise ValueError('handoff_registry_layout_invalid')
 
@@ -528,13 +528,7 @@ def discover(roots, *, latest=5):
         root = Path(roots[key]).resolve()
         if not root.is_dir():
             raise ValueError('handoff_history_root_unavailable')
-        bases = [root] if key == 'helper_history' else []
-        if key == 'helper_releases' and root.is_dir():
-            releases = sorted((p for p in root.iterdir() if p.is_dir() and p.name.startswith(('foresight-', 'helper-', 'economy-'))), reverse=True)
-            if len(releases) > 100:
-                raise ValueError('handoff_release_directory_limit')
-            for release in releases:
-                bases.extend(release / app / 'diagnostics' for app in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy'))
+        bases = [root] if key == 'helper_history' else release_diagnostics(root, limit_error='handoff_release_directory_limit')
         for base in bases:
             directory = base / 'field-recording'
             if not directory.is_dir():

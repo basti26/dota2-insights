@@ -149,13 +149,16 @@ def review(root, session, *, expected_package_id=None, source_reference=None, ca
     from .item_review_priorities import ItemReviewPriorities
     from .equipment_continuity import EquipmentContinuity
     from .observation_index import journal_reference
+    from .observation_runtime import RuntimeProfile
     statuses, heroes, slots = Counter(), Counter(), Counter()
     priorities = ItemReviewPriorities(catalogue)
     continuity = EquipmentContinuity(catalogue)
+    runtime = RuntimeProfile()
     accepted = 0
     with open_rows(root, session, expected_package_id=expected_package_id, with_evidence=True) as (manifest, rows):
         ref = journal_reference(source_reference, manifest) if source_reference is not None else None
         for _, row, evidence in rows:
+            runtime.add(row)
             continuity.add(row, {**evidence, **({'source': ref} if ref is not None else {})})
             if ref is not None:
                 priorities.add(manifest['match_id'], row, {**evidence, 'source': ref})
@@ -179,12 +182,14 @@ def review(root, session, *, expected_package_id=None, source_reference=None, ca
             'item_review_priorities': priorities.result(), 'priority_queue_limit_reached': priorities.at_capacity,
             'catalogue_source': catalogue_source,
             'equipment_continuity': continuity.result(),
+            'runtime_profile': runtime.result(),
             'priority_inputs_available': source_reference is not None and catalogue is not None,
             'images_verified': False, 'accuracy_verified': False,
             'source_verified_before_and_after': True, 'other_channels': 'not_closed_by_this_manifest'}
 
 
 def render_markdown(reports, skipped, *, index_state):
+    from .observation_runtime import render_markdown as runtime_lines
     lines = ['\n## 原生逐局装备观测', '', f'索引状态：{index_state}。',
         '只复核日志边界和身份；accepted/known数量不表示识别准确率，图片尚未独立核验。', '']
     for report in reports:
@@ -196,6 +201,7 @@ def render_markdown(reports, skipped, *, index_state):
             f"英雄观测行：{report['hero_observation_counts']}",
             f"格状态日志计数：{report['slot_status_counts']}",
             '其他通道未由本清单封存，没有认证实际英雄/物品图像。', '']
+        lines.extend(runtime_lines(report.get('runtime_profile')))
         continuity = report.get('equipment_continuity', {})
         lines += ['#### 大件识别中断复查', '',
             f"目录可用：{continuity.get('catalogue_available', False)}；状态变化计数：{continuity.get('counts', {})}。",

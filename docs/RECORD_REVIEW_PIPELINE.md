@@ -16,6 +16,8 @@
 python tools/review_recordings.py --latest 3
 ```
 
+核对新版地图时，可给同一个命令传入 `--ward-map-revision <已封存地图版本目录>`。报告先复验目标版本，再比较每份眼位记录起止时安装目录的地图指纹。两端均与目标一致的记录可优先检查画面。运行时实际加载的地图、同帧镜头和眼位落点仍需独立证据。
+
 使用本机忽略配置config/history.local.json中的helper_history/helper_releases。不启动游戏、不采屏录音、不联网、不解析DEM，也不要求用户操作新的EXE。旧报告和原始资料保留，新报告写入Insights自己的diagnostics/record-content/<UTC>/。
 
 ## 执行流程
@@ -25,7 +27,7 @@ python tools/review_recordings.py --latest 3
 3. review_closed_record_content.generate读取两种索引；先按配置根和固定目录布局复查路径，再依据索引记录的manifest原字节SHA进入原生open_rows，分析前后重新验证源文件。旧package继续使用ClosedJournals复验。
 4. 输出同一份REPORT.md/report.json，原生本人GSI、原生装备与整次启动包分节；完整性缺口保留，等待/阻止通道不补零，不因其他通道可读而冒充已完成。装备和GSI只按比赛及两种会话明确关联，不以相同UTC猜身份。
 
-源码历史路径形如self-economy/self-economy-<UUID>/closed-matches/match_<ID>/game_<会话>。免安装版只在helper-*或economy-*目录下的Dota2Helper或Dota2Economy/diagnostics按同一固定路径查找，不递归搜索无关目录。最多100个release目录、10000个候选，所选latest为1–25（受旧包入口上限约束）；新原生索引自身上限128项。选择最近目录时使用文件系统时间排序，不把这个时间当游戏数据时间。正文仍用记录内provider/接收UTC。
+源码历史路径形如 `self-economy/self-economy-<UUID>/closed-matches/match_<ID>/game_<会话>`。免安装版从已配置的发布根读取直属发布目录和 `preview-<构建号>-local` 下一层的发布目录。两种布局使用相同的应用和 diagnostics 路径规则。最多扫描 100 个发布目录和 10000 个候选，所选 `latest` 为 1–25，新原生索引上限 128 项。最近目录按文件系统时间排序，正文仍使用记录内的 provider 或接收 UTC。
 
 索引不是持久读许可。正文/清单在索引后变动、SHA不符、身份不符、符号链接/目录联接或越界路径均拒绝本次内容分析；拒绝前不生成成功报告目录。已有索引/报告不因此被删除，也不被默认为新执行成功。原子更新失败保留之前的索引，锁和临时文件收尾；之前索引仍必须在使用时重验。未知进程遗留锁不自动删除。
 

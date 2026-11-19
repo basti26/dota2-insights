@@ -6,7 +6,7 @@ overlay: camera/frame alignment and independent anchor truth remain external.
 import math
 import numpy as np
 
-from .native_camera_review import validate_position
+from .native_camera_review import validate_position, validate_orientation
 
 
 VERSION='native_position_anchor_calibration_v1'
@@ -24,6 +24,40 @@ def _normalized(world,camera,yaw,pitch):
     local=(world-camera) @ _basis(camera,yaw,pitch).T
     if np.any(local[:,2]<=1e-6):return None
     return local[:,:2]/local[:,2,None]
+
+
+def _anchor_arrays(anchors, size):
+    if not isinstance(anchors,list) or not 10<=len(anchors)<=32:
+        raise ValueError('invalid_input')
+    identities=set();world=[];screen=[];roles=[]
+    for anchor in anchors:
+        if (not isinstance(anchor,dict) or not isinstance(anchor.get('id'),str) or not anchor['id']
+                or anchor['id'] in identities or anchor.get('role') not in ('fit','check')
+                or anchor.get('coordinate_basis')!='centered_world_xyz'
+                or not isinstance(anchor.get('source_sha256'),str)
+                or len(anchor['source_sha256'])!=64
+                or any(c not in '0123456789abcdef' for c in anchor['source_sha256'])):
+            raise ValueError('anchor_provenance_or_identity')
+        for key,n in [('world_xyz',3),('screen_xy',2)]:
+            value=anchor.get(key)
+            if not isinstance(value,list) or len(value)!=n or any(
+                    type(v) not in (int,float) or not math.isfinite(v) for v in value):
+                raise ValueError('anchor_numeric_or_height_missing')
+        identities.add(anchor['id']);world.append(anchor['world_xyz']);screen.append(anchor['screen_xy'])
+        roles.append(anchor['role'])
+    world=np.array(world);screen=np.array(screen);train=np.array([r=='fit' for r in roles])
+    if train.sum()<6 or (~train).sum()<4:
+        raise ValueError('separate_fit_and_check_anchors_required')
+    if np.any(abs(world)>1e7) or np.any(screen<0) or np.any(screen>np.array(size)-1):
+        raise ValueError('anchor_outside_limits')
+    if len(set(map(tuple,world)))!=len(world) or len(set(map(tuple,screen)))!=len(screen):
+        raise ValueError('duplicate_anchor_coordinates')
+    for mask in (train,~train):
+        normalized=screen[mask]/np.array(size)
+        singular=np.linalg.svd(normalized-normalized.mean(axis=0),compute_uv=False)
+        if np.min(np.ptp(normalized,axis=0))<.15 or singular[-1]<.08:
+            raise ValueError('anchors_spatially_degenerate')
+    return world,screen,train
 
 
 def fit(position, anchors, size, *, region_check=None):
@@ -53,35 +87,10 @@ def fit(position, anchors, size, *, region_check=None):
         width,height=size
         if (type(width) is not int or type(height) is not int or not 640<=width<=4096
                 or not 480<=height<=2160 or not isinstance(anchors,list) or not 10<=len(anchors)<=32):return result
-        identities=set();world=[];screen=[];roles=[]
-        for anchor in anchors:
-            if (not isinstance(anchor,dict) or not isinstance(anchor.get('id'),str) or not anchor['id']
-                    or anchor['id'] in identities or anchor.get('role') not in ('fit','check')
-                    or anchor.get('coordinate_basis')!='centered_world_xyz'
-                    or not isinstance(anchor.get('source_sha256'),str)
-                    or len(anchor['source_sha256'])!=64
-                    or any(c not in '0123456789abcdef' for c in anchor['source_sha256'])):
-                result['reason']='anchor_provenance_or_identity';return result
-            for key,n in [('world_xyz',3),('screen_xy',2)]:
-                value=anchor.get(key)
-                if not isinstance(value,list) or len(value)!=n or any(
-                        type(v) not in (int,float) or not math.isfinite(v) for v in value):
-                    result['reason']='anchor_numeric_or_height_missing';return result
-            identities.add(anchor['id']);world.append(anchor['world_xyz']);screen.append(anchor['screen_xy'])
-            roles.append(anchor['role'])
-        world=np.array(world);screen=np.array(screen);train=np.array([r=='fit' for r in roles])
-        if train.sum()<6 or (~train).sum()<4:
-            result['reason']='separate_fit_and_check_anchors_required';return result
-        if np.any(abs(world)>1e7) or np.any(screen<0) or np.any(screen>np.array(size)-1):
-            result['reason']='anchor_outside_limits';return result
-        # Shared coordinates cannot masquerade as independent checks.
-        if len(set(map(tuple,world)))!=len(world) or len(set(map(tuple,screen)))!=len(screen):
-            result['reason']='duplicate_anchor_coordinates';return result
-        for mask in (train,~train):
-            normalized=screen[mask]/np.array(size)
-            singular=np.linalg.svd(normalized-normalized.mean(axis=0),compute_uv=False)
-            if np.min(np.ptp(normalized,axis=0))<.15 or singular[-1]<.08:
-                result['reason']='anchors_spatially_degenerate';return result
+        try:
+            world,screen,train=_anchor_arrays(anchors,size)
+        except ValueError as exc:
+            result['reason']=str(exc);return result
         camera=np.array(position['camera_xyz']);yaw=position['yaw_xy_degrees']
         center=(np.array(size)-1)/2;observed=screen[train]-center
         def evaluate(pitch):
@@ -122,6 +131,74 @@ def fit(position, anchors, size, *, region_check=None):
             matrix_3d=matrix.tolist(),camera_xyz=camera.tolist(),yaw_xy_degrees=yaw,
             native_viewport=list(size),
             look_at_z_candidate=float(camera[2]-target_distance*math.tan(math.radians(pitch))))
+        return result
+    except (ValueError,TypeError,KeyError,OverflowError,np.linalg.LinAlgError):return result
+
+
+def fit_orientation(orientation, anchors, size, *, region_check=None):
+    """Conditionally fit focal length and image roll from a reported direction.
+
+    Only fit anchors determine the two linear coefficients. Check anchors can
+    reject the result but never choose its parameters or repair the input pose.
+    """
+    result={'version':'native_orientation_anchor_calibration_v1','status':'unavailable',
+        'reason':'invalid_input','matrix_3d':None,'live_usable':False,
+        'coordinate_accuracy_verified':False,'capture_frame_alignment_verified':False,
+        'atomic_pair_verified':False,'anchor_truth_verified':False,
+        'assumptions':['perspective_camera','square_pixels',
+            'principal_point_at_native_client_center','reported_direction_transfers_to_frame',
+            'anchors_use_centered_world_xyz_and_exact_ground_or_model_points']}
+    try:
+        validate_orientation(orientation)
+        width,height=size
+        if (type(width) is not int or type(height) is not int or not 640<=width<=4096
+                or not 480<=height<=2160):return result
+        if region_check is not None:
+            if (not isinstance(region_check,dict) or region_check.get('version')!='native_camera_region_check_v1'
+                    or region_check.get('status') not in ('conditional_conflict','conditional_compatible','unavailable')
+                    or (region_check.get('status')!='unavailable' and region_check.get('viewport_identity_verified') is not True)):
+                result['reason']='invalid_region_check';return result
+            if region_check['status']!='conditional_compatible':
+                result['reason']=('native_camera_frame_region_conflict' if region_check['status']=='conditional_conflict'
+                                  else 'native_camera_frame_region_unavailable');return result
+        try:
+            world,screen,train=_anchor_arrays(anchors,size)
+        except ValueError as exc:
+            result['reason']=str(exc);return result
+        position=orientation['position_candidate'];derived=orientation['orientation_candidate']
+        camera=np.array(position['camera_xyz']);yaw=derived['yaw_xy_degrees']
+        pitch=derived['downward_pitch_degrees']
+        if abs(math.cos(math.radians(pitch)))<1e-6:
+            result['reason']='camera_pitch_singular';return result
+        normalized=_normalized(world,camera,yaw,pitch)
+        if normalized is None:
+            result['reason']='anchor_behind_reported_camera';return result
+        center=(np.array(size)-1)/2
+        x,y=normalized[train].T;u,v=(screen[train]-center).T
+        denominator=float(np.sum(x*x+y*y))
+        if denominator<1e-9:
+            result['reason']='anchors_spatially_degenerate';return result
+        a=float(np.sum(x*u+y*v)/denominator)
+        b=float(np.sum(x*v-y*u)/denominator)
+        focal=math.hypot(a,b)
+        if not .2*max(size)<=focal<=8*max(size):
+            result['reason']='no_positive_camera_fit';return result
+        residual=np.linalg.norm(normalized @ np.array([[a,b],[-b,a]])+center-screen,axis=1)
+        scale=height/1080
+        result.update(fit_anchor_count=int(train.sum()),check_anchor_count=int((~train).sum()),
+            fit_rms_px=float(np.sqrt(np.mean(residual[train]**2))),
+            check_max_error_px=float(max(residual[~train])),check_limit_px=4*scale,
+            focal_candidate_px=focal,
+            vertical_fov_candidate_degrees=math.degrees(2*math.atan((height-1)/(2*focal))),
+            clockwise_image_roll_candidate_degrees=math.degrees(math.atan2(b,a)),
+            pitch_from_reported_direction_degrees=pitch)
+        if result['fit_rms_px']>2*scale or result['check_max_error_px']>4*scale:
+            result['reason']='anchor_reprojection_failed';return result
+        rotation=_basis(camera,yaw,pitch)
+        intrinsic=np.array([[a,-b,center[0]],[b,a,center[1]],[0,0,1.]])
+        result.update(status='conditional_candidate',reason='orientation_fit_and_separate_checks_passed',
+            matrix_3d=(intrinsic @ np.column_stack([rotation,-rotation@camera])).tolist(),
+            native_viewport=list(size),camera_xyz=camera.tolist(),yaw_xy_degrees=yaw)
         return result
     except (ValueError,TypeError,KeyError,OverflowError,np.linalg.LinAlgError):return result
 

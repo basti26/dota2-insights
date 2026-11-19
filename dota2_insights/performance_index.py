@@ -4,6 +4,8 @@ import hashlib
 from pathlib import Path, PurePosixPath
 import re
 
+from .history import release_record_tail
+
 from .match_journals import _json, _read
 from .match_journal_index import history_bases, index_destination, write_index, read_index as _read_index
 from .performance_handoff import verify
@@ -26,10 +28,10 @@ def resolve_reference(reference, roots):
         raise ValueError('performance_index_reference_invalid')
     parts = path.parts
     if key == 'helper_releases':
-        if (len(parts) != 6 or not parts[0].startswith(('foresight-', 'helper-', 'economy-'))
-                or parts[1] not in ('Foresight', 'ForesightEconomy', 'Dota2Helper', 'Dota2Economy') or parts[2] != 'diagnostics'):
+        tail = release_record_tail(parts)
+        if tail is None:
             raise ValueError('performance_index_release_layout_invalid')
-        parts = parts[3:]
+        parts = tail
     if (len(parts) != 3 or parts[0] != 'game-frames' or parts[2] != 'closed-match'
             or not re.fullmatch(r'run_[a-f0-9]{32}', parts[1])):
         raise ValueError('performance_index_layout_invalid')

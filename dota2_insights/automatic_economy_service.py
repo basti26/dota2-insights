@@ -4,10 +4,15 @@ import json
 from html import escape
 import os
 from pathlib import Path
+import re
 import sys
 import time
 
 from . import automatic_economy as review
+from .match_journal_index import IndexBusyError
+
+ACTIVE_RECHECK_S = 600
+COMPLETE_RECHECK_S = 3600
 
 
 def home(root):
@@ -77,6 +82,7 @@ class Service:
                     link = '<a href="' + escape(path.relative_to(self.folder).as_posix(), quote=True) + '">查看</a>'
             label = {'queued': '待处理', 'waiting_replay': '记录已复查，缺录像',
                 'waiting_sources_or_comparable_records': '等待闭合来源或可比记录',
+                'waiting_source_index': '来源索引正被占用，稍后重试',
                 'review_complete_evidence_only': '复查完成，图像真值待确认',
                 'review_failed': '复查异常，等待重试', 'replay_review_failed': '记录已复查，录像复查异常',
                 'paused_game_running': '等待关闭游戏'}.get(task.get('state'), '等待')
@@ -94,6 +100,7 @@ class Service:
             'error': error, 'tasks': len(tasks), 'complete': sum(t.get('state') == 'review_complete_evidence_only' for t in tasks),
             'waiting_replay': sum(t.get('state') == 'waiting_replay' for t in tasks),
             'waiting_sources': sum(t.get('state') == 'waiting_sources_or_comparable_records' for t in tasks),
+            'waiting_source_index': sum(t.get('state') == 'waiting_source_index' for t in tasks),
             'failed': sum(bool(t.get('error')) for t in tasks),
             'latest_report': latest.get('report'), 'latest_match_id': latest.get('match_id'),
             'latest_reviewed_at_utc': latest.get('reviewed_at_utc'), 'independent': True})
@@ -132,6 +139,10 @@ class Service:
         if not due:
             self.heartbeat(); return True
         task = min(due, key=lambda t: (t.get('next_check_epoch', 0), t['ended_at_utc']))
+        self._process(task)
+        return True
+
+    def _process(self, task):
         mid = task['match_id']
 
         def check():
@@ -145,20 +156,60 @@ class Service:
         try:
             self.heartbeat('reviewing_records', mid)
             result = self.runner(dict(task), root=self.root, config=self.config, heartbeat=heartbeat, check=check)
-            result['next_check_epoch'] = self.now() + 600
             result['attempts'] = task.get('attempts', 0) + 1
             if result.get('error'):
                 result['failures'] = task.get('failures', 0) + 1
-                result['next_check_epoch'] = self.now() + min(86400, 600 * 2**min(result['failures'] - 1, 7))
+                streak = task.get('retry_failure_streak', task.get('failures', 0)) + 1
+                result['retry_failure_streak'] = streak
+                result['next_check_epoch'] = self.now() + min(86400, 600 * 2**min(streak - 1, 7))
+            else:
+                # Keep cumulative failures for history; a recovered task must
+                # not inherit a day-long retry delay after a later new error.
+                result['retry_failure_streak'] = 0
+                interval = (COMPLETE_RECHECK_S if result.get('state') == 'review_complete_evidence_only'
+                            else ACTIVE_RECHECK_S)
+                result['next_check_epoch'] = self.now() + interval
             self.state['tasks'][mid] = result
+        except IndexBusyError:
+            # Preserve any prior report/error and historical failures. A short
+            # lease conflict must not add a failure or day-long retry backoff.
+            task.update(next_check_epoch=self.now() + 30, state='waiting_source_index')
         except InterruptedError:
             task.update(next_check_epoch=self.now() + 30, state='paused_game_running')
         except Exception as exc:
             failures = task.get('failures', 0) + 1
+            streak = task.get('retry_failure_streak', task.get('failures', 0)) + 1
             task.update(error=type(exc).__name__, failures=failures, state='review_failed',
-                next_check_epoch=self.now() + min(86400, 600 * 2**min(failures - 1, 7)))
+                retry_failure_streak=streak,
+                next_check_epoch=self.now() + min(86400, 600 * 2**min(streak - 1, 7)))
         self.save(); self.heartbeat()
-        return True
+
+
+def retry_match(root, match_id):
+    """Process one existing queue entry under the normal service lease."""
+    if not isinstance(match_id, str) or re.fullmatch(r'[1-9][0-9]{0,19}', match_id) is None:
+        raise ValueError('automatic_review_match_id_invalid')
+    with lease(root) as acquired:
+        if not acquired:
+            return 'service_busy'
+        service = Service(root)
+        if (service.folder / 'stop.request').exists():
+            return 'stop_requested'
+        review.refuse_locked_match(match_id)
+        task = service.state['tasks'].get(match_id)
+        if task is None:
+            return 'not_queued'
+        if not isinstance(task, dict) or task.get('match_id') != match_id:
+            raise ValueError('automatic_review_task_identity_mismatch')
+        try:
+            service.check()
+        except InterruptedError:
+            return 'paused_game_running'
+        try:
+            service._process(task)
+        finally:
+            service.heartbeat('stopped')
+        return service.state['tasks'][match_id]['state']
 
 
 def main(root=review.ROOT, *, once=False):

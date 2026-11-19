@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 import uuid
 
 from .map_assets import compiled_blocks
@@ -202,6 +203,21 @@ def latest_revision(store):
     return path, snapshot
 
 
+def _publish_rename(source, target):
+    if os.name == 'nt':
+        for delay in (.03, .08, .20):
+            try:
+                os.rename(source, target)
+                return
+            except PermissionError as exc:
+                # A recently written file or directory can still be open
+                # briefly in another Windows process. Never overwrite it.
+                if exc.winerror not in (5, 32, 33):
+                    raise
+                time.sleep(delay)
+    os.rename(source, target)
+
+
 def _publish_blob(blobs, raw, expected):
     blobs.mkdir(parents=True, exist_ok=True)
     target = blobs/(expected+'.vpk')
@@ -213,7 +229,12 @@ def _publish_blob(blobs, raw, expected):
                 stream.flush()
                 os.fsync(stream.fileno())
             try:
-                os.link(temporary, target)
+                if os.name == 'nt':
+                    # Windows rename is atomic and refuses to replace an
+                    # existing file. It works on stores without hard links.
+                    _publish_rename(temporary, target)
+                else:
+                    os.link(temporary, target)
             except FileExistsError:
                 pass
         finally:
@@ -258,7 +279,7 @@ def capture(game, store):
             (stage/'COMPLETE').write_text(sha(stage/'snapshot.json')+'\n', encoding='ascii')
             revision.parent.mkdir(parents=True, exist_ok=True)
             try:
-                os.rename(stage, revision)
+                _publish_rename(stage, revision)
             except FileExistsError:
                 read_revision(revision)
         except Exception as exc:

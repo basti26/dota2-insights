@@ -146,6 +146,8 @@ def review(package, roots):
                     if parsed['source_sha256'] != csv_ref['sha256'] or parsed['source_bytes'] != csv_ref['bytes']:
                         raise ValueError('performance_csv_source_changed')
                     result['streams'] = parsed
+                    if not parsed['streams']:
+                        result['status'] = 'no_attributable_frame_rows'
                 results.append(result)
     return {'launcher_run_id':package['launcher_run_id'], 'matches':results, 'unavailable':unavailable,
             'source_verified_before_and_after':True}
@@ -154,7 +156,7 @@ def review(package, roots):
 def render_markdown(reports, *, title='对局性能复核'):
     lines = ['# '+title, '', '只使用明确比赛/会话及原生QPC对局前台窗口；提交帧与显示帧分别统计，不合并不同swapchain。',
         '不是助手开/关因果实验，不把GPU毫秒当利用率，不把采样窗口当全局覆盖。', '',
-        '| 比赛 | 状态 | 覆盖秒 | 流 | 提交FPS | 显示FPS | 显示1% low | 显示P99毫秒 | 显示>100ms间隔 |',
+        '| 比赛 | 状态 | 前台上下文秒数 | 流 | 提交FPS | 显示FPS | 显示1% low | 显示P99毫秒 | 显示>100ms间隔 |',
         '|---|---|---:|---|---:|---:|---:|---:|---:|']
     def value(doc, key):
         return '未知' if not isinstance(doc,dict) or doc.get(key) is None else str(doc[key])

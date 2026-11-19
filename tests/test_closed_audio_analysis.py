@@ -1,4 +1,5 @@
 """Guarded inference on generated short PCM, no game, real recording or network."""
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -122,6 +123,39 @@ class ClosedAudioAnalysisTests(unittest.TestCase):
         (self.output/'predictions.jsonl').write_text('changed\n')
         with self.assertRaisesRegex(ValueError, 'frozen_sources_conflict'):
             seal_receipt(self.output, inputs, before, before, package_id='a'*64)
+        self.assertFalse((self.output/'analysis-receipt.json').exists())
+
+    def test_rewriting_scan_and_manifest_together_cannot_replace_the_original_freeze(self):
+        before = bank_fingerprint(self.bank)
+        with open_analysis_inputs(self.audio.inspect(), self.fixture.roots, self.audio.folder) as inputs:
+            self.execute(inputs)
+        scans = self.output / 'scans.jsonl'
+        scans.write_bytes(b'{"changed":true}\n')
+        manifest = self.output / 'prediction-manifest.json'
+        frozen = json.loads(manifest.read_bytes())
+        frozen['scan_sha256'] = hashlib.sha256(scans.read_bytes()).hexdigest()
+        manifest.write_text(json.dumps(frozen), encoding='utf-8')
+
+        with self.assertRaisesRegex(ValueError, 'frozen_sources_conflict'):
+            seal_receipt(self.output, inputs, before, before, package_id='a'*64)
+        self.assertFalse((self.output/'analysis-receipt.json').exists())
+
+    def test_legacy_reference_partial_consumption_cannot_complete(self):
+        reference = self.audio.folder / 'reference-gsi.jsonl'
+        raw = json.dumps({'take_id': 'f'*32, 'audio_offset_s': .01,
+                          'context': {'match_id': '12345', 'abilities': []}}) + '\n'
+        reference.write_text(raw * 2, encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'reference_review_incomplete'):
+            with open_analysis_inputs(self.audio.inspect(), self.fixture.roots, self.audio.folder) as inputs:
+                original = inputs.reference_rows
+
+                def first_row_only():
+                    with closing(original()) as rows:
+                        yield next(rows)
+
+                inputs.reference_rows = first_row_only
+                self.execute(inputs)
+        self.assertFalse(inputs.after_verified)
         self.assertFalse((self.output/'analysis-receipt.json').exists())
 
     def test_failed_receipt_publish_leaves_no_partial_success_marker(self):

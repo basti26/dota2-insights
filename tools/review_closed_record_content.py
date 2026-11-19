@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
-def generate(root=ROOT, *, roots=None):
+def generate(root=ROOT, *, roots=None, ward_map_revision=None):
     from dota2_insights.closed_journals import read_package
-    from dota2_insights.history import history_roots, checked_output
+    from dota2_insights.history import history_roots, checked_input, checked_output
     from dota2_insights.record_content_review import summarize, render_markdown, item_catalogue
     from dota2_insights.performance_review import review as review_performance, render_markdown as render_performance
     from dota2_insights.audio_integrity_review import review as review_audio, render_markdown as render_audio
@@ -263,7 +263,13 @@ def generate(root=ROOT, *, roots=None):
                         ('match_id','game_session_id','record_session_id'))])
             performance_match_reports.append(result)
     from dota2_insights.ward_camera_review import discover_and_review as review_ward_camera, render_markdown as render_ward_camera
-    ward_camera = review_ward_camera(roots, latest=5)
+    target_sha256 = None
+    if ward_map_revision is not None:
+        from dota2_insights.map_updates import read_revision
+        target_sha256 = read_revision(checked_input(root, ward_map_revision))['identity']['map_asset_sha256']
+    ward_camera = review_ward_camera(roots, latest=5, target_map_sha256=target_sha256,
+                                     analyze_minimap_pixels=True, analyze_ground_ring_pixels=True,
+                                     analyze_terrain_patch_pixels=True, analyze_alt_motion_pixels=True)
     # Only write once all selected sources have passed their after-analysis check.
     output = checked_output(root, root/'diagnostics/record-content'/
         datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
@@ -306,7 +312,11 @@ def generate(root=ROOT, *, roots=None):
 
 
 def main():
-    print(json.dumps(generate(),ensure_ascii=False))
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--ward-map-revision', type=Path)
+    args = parser.parse_args()
+    print(json.dumps(generate(ward_map_revision=args.ward_map_revision), ensure_ascii=False))
 
 
 if __name__ == '__main__':

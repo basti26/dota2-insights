@@ -1,19 +1,62 @@
 """Source/release discovery and end-to-end reports from owned synthetic files."""
 import hashlib
+import errno
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
 
-from dota2_insights.match_journal_index import discover, read_index, resolve_reference, sync
+from dota2_insights.match_journal_index import discover, read_index, resolve_reference, sync, index_destination, IndexBusyError
 from dota2_insights.match_journal_review import review
 from tools.review_closed_record_content import generate
 from tools.review_recordings import run
 
 
 class NativeIndexTests(unittest.TestCase):
+    def test_non_contention_lock_error_is_not_reported_as_busy(self):
+        import sys
+        primitive = 'msvcrt.locking' if sys.platform == 'win32' else 'fcntl.flock'
+        with tempfile.TemporaryDirectory() as folder:
+            with patch(primitive, side_effect=OSError(errno.EIO, 'injected I/O error')):
+                with self.assertRaises(OSError) as caught:
+                    with index_destination(Path(folder), {}, 'native-match-handoff'):
+                        self.fail('an unsuccessful lock must not enter the writer')
+            self.assertNotIsInstance(caught.exception, IndexBusyError)
+            self.assertEqual(caught.exception.errno, errno.EIO)
+            with index_destination(Path(folder), {}, 'native-match-handoff'):
+                pass
+
+    def test_orphan_file_is_reusable_but_live_lease_is_exclusive(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder)
+            output = project / 'diagnostics/native-match-handoff'
+            output.mkdir(parents=True)
+            (output / 'sync.lock').touch()
+            with index_destination(project, {}, 'native-match-handoff'):
+                with self.assertRaises(IndexBusyError):
+                    with index_destination(project, {}, 'native-match-handoff'):
+                        self.fail('simultaneous writer admitted')
+            with index_destination(project, {}, 'native-match-handoff'):
+                pass
+
+    def test_crashed_writer_releases_kernel_lock(self):
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as folder:
+            # Owned synthetic child only: no history, network, capture or parser.
+            script = ('import os,sys; from pathlib import Path; '
+                'from dota2_insights.match_journal_index import index_destination; '
+                'lease=index_destination(Path(sys.argv[1]),{},"native-match-handoff"); '
+                'lease.__enter__(); os._exit(23)')
+            result = subprocess.run([sys.executable, '-c', script, folder],
+                cwd=Path(__file__).resolve().parents[1], timeout=15, capture_output=True)
+            self.assertEqual(result.returncode, 23)
+            with index_destination(Path(folder), {}, 'native-match-handoff'):
+                pass
+
     def setUp(self):
         from test_match_journals import MatchJournalTests
         self.fixture = MatchJournalTests()
@@ -46,6 +89,64 @@ class NativeIndexTests(unittest.TestCase):
         self.assertEqual(read_index(path)['entries'], second['entries'])
         self.assertEqual(before, {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.fixture.folder.iterdir()})
 
+    def test_newer_unfinished_directory_cannot_crowd_out_closed_journal(self):
+        published = self.fixture.folder
+        unfinished = published.parent / ('game_' + 'f' * 32)
+        unfinished.mkdir()
+        (unfinished / 'samples.jsonl').write_bytes(b'partial')
+        newer = published.stat().st_mtime_ns + 2_000_000_000
+        os.utime(unfinished, ns=(newer, newer))
+        single = sync(self.project, self.roots, latest=1)['entries']
+        self.assertEqual(len(single), 1)
+        self.assertEqual(single[0]['state'], 'ready_with_gaps')
+        self.assertEqual(resolve_reference(single[0], self.roots), published)
+        both = sync(self.project, self.roots, latest=2)['entries']
+        self.assertEqual([entry['state'] for entry in both], ['ready_with_gaps', 'blocked'])
+
+    def test_bad_completed_candidates_are_replaced_by_older_verified_package(self):
+        published = self.fixture.folder
+        malformed = published.parent / ('game_' + 'c' * 32)
+        malformed.mkdir()
+        raw = json.dumps({**self.fixture.manifest, 'game_session_id': malformed.name,
+                          'payload': ['samples.jsonl']}).encode()
+        (malformed / 'manifest.json').write_bytes(raw)
+        (malformed / 'COMPLETE').write_text(hashlib.sha256(raw).hexdigest())
+        forged = published.parent / ('game_' + 'd' * 32)
+        forged.mkdir()
+        (forged / 'manifest.json').write_bytes(b'{}')
+        (forged / 'COMPLETE').write_text('0' * 64)
+        original = published.stat().st_mtime_ns
+        for offset, folder in enumerate((malformed, forged), start=1):
+            newer = original + offset * 2_000_000_000
+            os.utime(folder, ns=(newer, newer))
+        self.assertEqual([resolve_reference(ref, self.roots) for ref in discover(self.roots, latest=3)],
+                         [forged, malformed, published])
+
+        index = sync(self.project, self.roots, latest=1)
+        self.assertEqual(len(index['entries']), 1)
+        entry = index['entries'][0]
+        self.assertEqual(entry['state'], 'ready_with_gaps')
+        self.assertEqual(resolve_reference(entry, self.roots), published)
+        self.assertEqual(index['blocked_candidates_omitted'], 2)
+
+    def test_replacement_stops_after_two_extra_candidates(self):
+        from dota2_insights.match_journals import verify
+
+        published = self.fixture.folder
+        original = published.stat().st_mtime_ns
+        for offset in range(1, 4):
+            folder = published.parent / ('game_' + str(offset) * 32)
+            folder.mkdir()
+            (folder / 'COMPLETE').touch()
+            newer = original + offset * 2_000_000_000
+            os.utime(folder, ns=(newer, newer))
+        with patch('dota2_insights.match_journal_index.verify', wraps=verify) as checked:
+            index = sync(self.project, self.roots, latest=1)
+        self.assertEqual(checked.call_count, 3)
+        self.assertNotIn(published, [call.args[0] for call in checked.call_args_list])
+        self.assertEqual([entry['state'] for entry in index['entries']], ['blocked'])
+        self.assertEqual(index['blocked_candidates_omitted'], 2)
+
     def test_release_discovery_and_duplicate_package_omission(self):
         target = self.copy_release()
         only_release = sync(self.project, {'helper_releases': self.releases})
@@ -60,6 +161,31 @@ class NativeIndexTests(unittest.TestCase):
         target = self.releases / 'unrelated' / self.fixture.folder.relative_to(self.fixture.root)
         shutil.copytree(self.fixture.folder, target)
         self.assertEqual(discover({'helper_releases': self.releases}), [])
+
+    def test_local_versioned_preview_is_discovered_with_dist_as_the_history_root(self):
+        base = self.releases / 'preview-6979-local/foresight-0.1.0-preview-example/Foresight/diagnostics'
+        target = base / self.fixture.folder.relative_to(self.fixture.root)
+        shutil.copytree(self.fixture.folder, target)
+        roots = {'helper_releases': self.releases}
+        entries = sync(self.project, roots)['entries']
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(resolve_reference(entries[0], roots), target)
+        self.assertEqual(review(target, expected_package_id=entries[0]['package_id'])['match_id'],
+                         self.fixture.rows[0]['match_id'])
+        admitted = entries[0]['source']
+        for invalid in ('extra/' + admitted, admitted.replace('preview-6979-local', 'preview-any-local')):
+            with self.assertRaises(ValueError):
+                resolve_reference({**entries[0], 'source': invalid}, roots)
+
+    def test_atlas_preview_is_read_through_the_same_release_history_root(self):
+        base = self.releases / 'preview-6983-atlas/foresight-test-preview/Foresight/diagnostics'
+        target = base / self.fixture.folder.relative_to(self.fixture.root)
+        shutil.copytree(self.fixture.folder, target)
+        roots = {'helper_releases': self.releases}
+        entry, = sync(self.project, roots)['entries']
+        self.assertEqual(resolve_reference(entry, roots), target)
+        with self.assertRaises(ValueError):
+            resolve_reference({**entry, 'source':entry['source'].replace('preview-6983-atlas','preview-6983-other')}, roots)
 
     def test_source_reference_cannot_escape_or_redirect_to_configuration(self):
         entry = sync(self.project, self.roots)['entries'][0]
@@ -82,7 +208,8 @@ class NativeIndexTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 sync(self.project, self.roots)
         self.assertEqual(before, path.read_bytes())
-        self.assertFalse((path.parent / 'sync.lock').exists())
+        with index_destination(self.project, self.roots, 'native-match-handoff'):
+            self.assertTrue((path.parent / 'sync.lock').is_file())
         self.assertFalse(list(path.parent.glob('*.tmp')))
 
     def test_corrupt_or_duplicate_index_identity_refused(self):

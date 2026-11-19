@@ -1,6 +1,6 @@
 """Review admitted native GSI journals with identity and source rechecks."""
 from .match_journals import open_rows
-from .self_economy_audit import SelfEconomyAudit
+from .self_economy_audit import SelfEconomyAudit, neutral_observation_summary, valuation_comparison_summary
 from .gsi_evidence_census import GsiEvidenceCensus
 
 
@@ -33,8 +33,9 @@ def render_markdown(reports, skipped, *, index_state):
             f"原生包：{report['package_id']}",
             f"完整性：{report['recording_integrity']}；记录{audit['rows']}行。",
             f"与已关闭启动器的本人GSI范围重合：{report['also_in_closed_launcher_scope']}（不可相加）。",
-            f"同包显示可比：普通{display['normal_comparable_rows']}行、熊灵{display['bear_comparable_rows']}行；金额不符{display['amount_mismatches']}，熊灵来源不符{display['bear_provenance_issues']}。",
+            valuation_comparison_summary(display),
             f"不可比原因：{display['uncomparable_reasons']}",
+            neutral_observation_summary(audit),
             '没有进行游戏画面、装备图像或完整净资产认证。', '']
     for entry in skipped:
         lines += [f"- 未分析：{entry.get('state', 'unknown')} / {entry.get('reason', '未通过交接')}"]

@@ -16,6 +16,10 @@ from dota2_insights.replay_workbench import game_running
 from dota2_insights.valve_resources import directory_bytes, read_vpk_directory, _read_resource
 
 DECODER_SHA256 = 'a4bb4f9945db985efb2cad90a90d06867de5ba7e0447a2a4a69a07dace781028'
+REVIEWED_DECODER_SHA256 = {
+    DECODER_SHA256,
+    '50502077543856a3f760eecf53b073dcdea5073c193f0274c2088b5a2a8f4d13',  # Source 2 Viewer 21.1 win-x64
+}
 
 
 def digest(path):
@@ -66,7 +70,8 @@ def run(game, decoder, output):
     output = checked_output(ROOT, output)
     if output.exists():
         raise ValueError('new_collision_output_required')
-    if digest(decoder) != DECODER_SHA256:
+    decoder_sha = digest(decoder)
+    if decoder_sha not in REVIEWED_DECODER_SHA256:
         raise ValueError('unreviewed_collision_decoder')
     output.parent.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(output.parent).free < 512*1024**2:
@@ -93,7 +98,7 @@ def run(game, decoder, output):
     np.savez_compressed(output/'meshes.npz', **arrays)
     guard()
     report.update(client_build=int(settings['ClientVersion']), map_asset_sha256=hashlib.sha256(raw).hexdigest(),
-        resource=resource, resource_sha256=hashlib.sha256(body).hexdigest(), decoder_sha256=DECODER_SHA256,
+        resource=resource, resource_sha256=hashlib.sha256(body).hexdigest(), decoder_sha256=decoder_sha,
         source_export_sha256=first_sha, repeated_export_exact_bytes_equal=True,
         mesh_archive_sha256=digest(output/'meshes.npz'),
         source_unchanged=directory_bytes(source)==raw and (game/'steam.inf').read_bytes()==steam)

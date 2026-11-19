@@ -85,10 +85,16 @@ class LaneWidgetSummary:
                 'advice_status': status, 'evidence': evidence})
 
     def result(self):
-        return {'status': 'not_recorded_unknown' if not self.extensions else 'metadata_recorded',
+        if self.states:
+            status = 'metadata_recorded'
+        elif self.extensions:
+            status = 'invalid_metadata_only'
+        else:
+            status = 'not_recorded_unknown'
+        return {'status': status,
             'extension_rows': self.extensions, 'invalid_rows': self.invalid,
             'recorded_state_counts': dict(self.states),
-            'unique_ready_text_states': len(self.ready_states) if self.extensions else None,
+            'unique_ready_text_states': len(self.ready_states) if self.states else None,
             'declared_selected_hero_ids': sorted(self.selected), 'declared_tip_hero_ids': sorted(self.tipped),
             'ally_metadata_status': 'metadata_recorded' if self.ally_extensions else 'not_recorded_unknown',
             'ally_extension_rows': self.ally_extensions,
@@ -103,6 +109,11 @@ class LaneWidgetSummary:
 def summary_text(result):
     if result.get('status') == 'not_recorded_unknown':
         return '对线页元数据：未知（未记录扩展，不能解释为零次使用）。'
+    if result.get('status') == 'invalid_metadata_only':
+        text = f"对线页元数据：核验的{result['invalid_rows']}行均无效，无法确认当时的控件状态。"
+        if result.get('budget_exceeded'):
+            text += ' 已达分析预算，结果不代表完整内容。'
+        return text
     text = (f"对线页元数据：有效{sum(result['recorded_state_counts'].values())}行，"
         f"无效{result['invalid_rows']}行；状态{result['recorded_state_counts']}；"
         f"不同ready文字状态{result['unique_ready_text_states']}，不是阅读次数。")

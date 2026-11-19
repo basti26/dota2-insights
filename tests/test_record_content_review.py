@@ -119,7 +119,7 @@ class ContentTests(unittest.TestCase):
         display = result['own_economy_audit']['12345']['display_checks']
         self.assertEqual(display['normal_comparable_rows'], 1)
         self.assertEqual(display['amount_mismatches'], 1)
-        self.assertIn('同包显示核对', review.render_markdown([result]))
+        self.assertIn('旧记录时间戳相同 1 行', review.render_markdown([result]))
 
     def test_boolean_and_unknown_components_not_coerced_to_zero(self):
         f = self.fixture()

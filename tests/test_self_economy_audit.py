@@ -44,6 +44,50 @@ class SelfEconomyAuditTests(unittest.TestCase):
         self.assertEqual(result['display_checks']['amount_mismatches'], 0)
         self.assertEqual(result['last_reported_gsi']['amount'], 9999)
 
+    def test_neutral_changes_compare_observed_slots_within_one_scope(self):
+        def sample(slots, *, second, session='first', receive='accepted'):
+            value = row(second=second)
+            value.update(record_session_id=session, valuation_receive_status=receive)
+            if slots is not None:
+                value['self_economy']['neutral_slots'] = slots
+            return value
+
+        result = self.audit(
+            sample({'neutral0': None, 'neutral1': None}, second=1),
+            sample({'neutral0': 'red_ledger', 'neutral1': 'future_item'}, second=2),
+            sample(None, second=3),
+            sample({'neutral0': 'brick', 'neutral1': 'rain?drop'}, second=4),
+            sample({'neutral0': None}, second=5, receive='rejected'),
+            sample({'neutral0': 'red_ledger'}, second=6),
+            sample({'neutral0': 'brick'}, second=7, session='second'),
+            sample({'neutral0': None, 'preserved_neutral3': 'skip'}, second=8, session='second'),
+        )['neutral_equipment']
+        self.assertEqual(result['rows_observed'], 6)
+        self.assertEqual(result['observations_by_slot'], {'neutral0': 6, 'neutral1': 2})
+        self.assertEqual(result['adjacent_changes_by_slot'], {'neutral0': 2, 'neutral1': 1})
+        self.assertEqual(result['last_observation']['slots'], {'neutral0': None})
+        self.assertEqual([(entry['before'], entry['after']) for entry in result['change_examples']],
+                         [(None, 'red_ledger'), (None, 'future_item'), ('brick', None)])
+        self.assertFalse(result['display_pixels_verified'])
+        self.assertNotIn('neutral_equipment', self.audit(row()))
+
+    def test_same_second_legacy_accepted_and_rejected_callbacks_stay_distinct(self):
+        accepted = row(amount=3000, status='reported')
+        accepted['valuation_receive_status'] = 'accepted'
+        accepted['display_economy']['valuation_binding'] = 'accepted_receive_callback'
+        rejected = row(amount=4000, status='reported')
+        rejected['valuation_receive_status'] = 'rejected'
+        rejected['display_economy'] = deepcopy(accepted['display_economy'])
+        result = self.audit(accepted, rejected, row())
+        self.assertEqual(result['display_checks']['comparison_binding_counts'],
+                         {'accepted_receive_callback': 1, 'legacy_provider_timestamp_only': 1})
+        self.assertEqual(result['display_checks']['mismatches_in_comparable_rows'], 0)
+        self.assertEqual(result['display_checks']['uncomparable_reasons'], {'valuation_callback_binding_invalid': 1})
+        del rejected['display_economy']
+        skipped = self.audit(rejected)
+        self.assertEqual(skipped['display_checks']['uncomparable_reasons'], {'valuation_callback_rejected': 1})
+        self.assertIsNone(skipped['display_checks']['mismatches_in_comparable_rows'])
+
     def test_same_packet_raw_or_display_disagreement_is_flagged(self):
         for key in ('raw_amount', 'amount'):
             value = row()

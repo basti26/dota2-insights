@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
-def run(root=ROOT, *, roots=None, latest=5):
+def run(root=ROOT, *, roots=None, latest=5, ward_map_revision=None):
     from dota2_insights.history import history_roots
     from dota2_insights.helper_handoff import sync as sync_legacy
     from dota2_insights.match_journal_index import sync as sync_native
@@ -27,7 +27,8 @@ def run(root=ROOT, *, roots=None, latest=5):
     minimap = sync_minimap(root, roots, latest=latest)
     audio = sync_audio(root, roots, latest=latest)
     performance = sync_performance(root, roots, latest=latest)
-    return {**generate(root, roots=roots), 'legacy_counts': legacy['counts'],
+    review_options = {} if ward_map_revision is None else {'ward_map_revision': ward_map_revision}
+    return {**generate(root, roots=roots, **review_options), 'legacy_counts': legacy['counts'],
             'native_duplicate_packages_omitted': native['duplicate_packages_omitted'],
             'equipment_duplicate_packages_omitted':equipment['duplicate_packages_omitted'],
             'bp_duplicate_packages_omitted':bp['duplicate_packages_omitted'],
@@ -43,8 +44,9 @@ def run(root=ROOT, *, roots=None, latest=5):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--latest', type=int, default=5)
+    parser.add_argument('--ward-map-revision', type=Path)
     args = parser.parse_args()
-    print(json.dumps(run(latest=args.latest), ensure_ascii=False))
+    print(json.dumps(run(latest=args.latest, ward_map_revision=args.ward_map_revision), ensure_ascii=False))
 
 
 if __name__ == '__main__':

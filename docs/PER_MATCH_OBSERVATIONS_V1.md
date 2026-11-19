@@ -28,6 +28,12 @@ open_rows进入与退出复验，并可固定expected_package_id，不能把旧�
 
 原生装备现已接入与旧格式共用的大件挑样和SHA/几何裁片。统一报告提供正文/行SHA绑定的item_review_priorities，tools/prepare_record_item_review.py验证当前装备索引后输出原图格裁片与contact.png。候选名也必须与原槽位一致，缺图/缺几何不猜补，图片准备不视为身份正确。详见[CLOSED_RECORD_REVIEW.md](CLOSED_RECORD_REVIEW.md)。
 
+## 处理耗时与精确缓存
+
+原生装备review在同一次open_rows进出复验范围内生成runtime_profile，日常装备报告和自动经济报告均保留。读取已记录的stage_ms七阶段及performance_ms中的capture、queue_wait、recognition；每项最多保存30000个有效数值，用nearest-rank P95，另列缺失、非法和容量排除数。无数值返回null，不能把缺字段补零或将重叠阶段相加；来源缺口、条件分组、游戏FPS和整局覆盖不由此认证。
+
+四类精确缓存hero_ocr、items、numeric_ocr、slot_png按generation_id（32位小写十六进制随机代次）分别统计。新助手在初始化/清理缓存时换代；首个有效快照只作基线，仅同代次相邻完整快照计算计数差。缺快照/缺代次断开差值，旧记录仅保留最后累计快照；同代次计数回退、配置矛盾或已退休代次再出现，整代差值不纳入统计。每类最多32代，超限明确排除。命中占比只针对可核对的相邻区间，不当作整局命中率、识别准确率或FPS收益。
+
 ## 双进程生成夹具
 
 Foresight真实MatchRecorder线程写一张生成的24×48像素图和合成观测，封存12345后接收12346会话；producer-ready.json表明writer_alive=true、shutdown_complete=false。此时以Insights独立CLI读取第一局，consumer-live.json返回一行且images_verified/accuracy_verified=false；之后才释放并正常关闭生产进程。两边只传数据路径和会话，没有互相导入源码。

@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 import re
 
+from .history import release_record_tail
+
 from .audio_match_handoff import verify
 from .match_journal_index import history_bases, index_destination, write_index, read_index as _read_index
 
@@ -17,10 +19,9 @@ def resolve_reference(reference, roots):
         raise ValueError('audio_match_index_reference_invalid')
     parts = path.parts
     if key=='helper_releases':
-        if (len(parts)!=7 or not parts[0].startswith(('foresight-','helper-','economy-'))
-                or parts[1] not in ('Foresight','ForesightEconomy','Dota2Helper','Dota2Economy') or parts[2]!='diagnostics'):
+        parts = release_record_tail(parts)
+        if parts is None:
             raise ValueError('audio_match_index_release_layout_invalid')
-        parts = parts[3:]
     if (len(parts)!=4 or parts[0]!='match-audio' or parts[2]!='closed-matches'
             or not re.fullmatch(r'run_[a-f0-9]{32}',parts[1])
             or not re.fullmatch(r'scope_[a-f0-9]{64}',parts[3])):

@@ -130,7 +130,9 @@ class EquipmentIndexTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 sync(self.project, self.roots)
         self.assertEqual(before, path.read_bytes())
-        self.assertFalse((path.parent / 'sync.lock').exists())
+        from dota2_insights.match_journal_index import index_destination
+        with index_destination(self.project, self.roots, 'equipment-handoff'):
+            pass  # A failed writer released its kernel lease.
 
     def test_empty_payload_remains_no_observations_in_combined_report(self):
         self.fixture.source.unlink()

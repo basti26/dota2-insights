@@ -220,7 +220,7 @@ def _read_csv_rows(stream_reader, path, application, source_sha256, source_bytes
                     heapq.heappush(slow_rows, candidate)
                 elif candidate[:2] > slow_rows[0][:2]:
                     heapq.heapreplace(slow_rows, candidate)
-    if not streams:
+    if not streams and not scoped:
         raise ValueError("no_attributable_dota2_presentmon_rows")
     reports = []
     for key, stream in streams.items():
@@ -258,7 +258,8 @@ def _read_csv_rows(stream_reader, path, application, source_sha256, source_bytes
     if scoped:
         result.update(clock_alignment='native_QPC_inside_declared_windows',
                       match_binding='caller_supplied_game_context_windows', qpc_frequency_hz=qpc_frequency_hz,
-                      qpc_windows=qpc_windows, scope_excluded_rows=excluded_scope)
+                      qpc_windows=qpc_windows, scope_excluded_rows=excluded_scope,
+                      frame_rows_status='recorded' if streams else 'no_attributable_frame_rows')
         result['limitations'] = [note for note in result['limitations'] if not note.startswith('Relative/QPC')]
         result['limitations'].append('Game context is sampled; transitions shorter than the sampling period may be missed.')
     return result

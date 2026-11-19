@@ -28,9 +28,17 @@ class AudioAnalysisInputs:
         self._reference_freeze = None
 
     def authorize_reference_review(self, output):
-        self._reference_freeze = (Path(output), prediction_gate(output, self))
+        if not self.reader.active:
+            raise ValueError('audio_analysis_reader_closed')
+        output = Path(output).resolve()
+        freeze = (output, prediction_gate(output, self))
+        if self._reference_freeze is not None and freeze != self._reference_freeze:
+            raise ValueError('audio_reference_prediction_freeze_changed')
+        self._reference_freeze = freeze
 
     def _check_reference_gate(self):
+        if not self.reader.active:
+            raise ValueError('audio_analysis_reader_closed')
         if self._reference_freeze is None:
             raise ValueError('audio_reference_requires_prediction_freeze')
         output, digest = self._reference_freeze
@@ -146,6 +154,11 @@ def open_analysis_inputs(package, roots, folder):
     with ClosedJournals(package, roots) as reader:
         inputs = AudioAnalysisInputs(reader, components[0], capture)
         yield inputs
+        # Candidate export also uses this context for verified PCM only.
+        if inputs._reference_freeze is not None:
+            if not inputs.reference_review_complete:
+                raise ValueError('audio_analysis_reference_review_incomplete')
+            inputs._check_reference_gate()
         if verify_audio(package, roots) != before:
             raise ValueError('audio_analysis_sources_changed')
     inputs.after_verified = True
@@ -170,11 +183,14 @@ def seal_receipt(output, inputs, bank_before, bank_after, *, package_id):
         raise ValueError('audio_analysis_after_verification_required')
     if bank_after != bank_before:
         raise ValueError('audio_analysis_bank_changed')
-    output = Path(output)
+    output = Path(output).resolve()
     path = output / 'prediction-manifest.json'
-    if path.stat().st_size > 4*1024**2:
-        raise ValueError('audio_analysis_prediction_manifest_budget')
-    frozen = json.loads(path.read_text(encoding='utf-8'))
+    from .match_journals import _json, _read
+    raw = _read(path, 4*1024**2)
+    manifest_sha = hashlib.sha256(raw).hexdigest()
+    if (output, manifest_sha) != inputs._reference_freeze:
+        raise ValueError('audio_analysis_frozen_sources_conflict')
+    frozen = _json(raw)
     expected = [{'file': Path(s['source']['path']).name, 'sha256': s['source']['sha256']}
                 for s in inputs.capture['segments']]
     if (frozen.get('stage') != 'prediction_frozen_before_reference'
@@ -194,7 +210,7 @@ def seal_receipt(output, inputs, bank_before, bank_after, *, package_id):
     result = {'schema_version': 1, 'kind': 'closed_audio_analysis_receipt', 'complete': True,
         'source_package_id': package_id, 'capture_run_id': inputs.capture['capture_run_id'],
         'source_verified_before_and_after': True, 'waveforms_verified_before_and_after': True,
-        'bank_hashes': bank_before, 'prediction_manifest_sha256': _sha(path),
+        'bank_hashes': bank_before, 'prediction_manifest_sha256': manifest_sha,
         'post_gsi_review_sha256': _sha(post_path),
         'reference_journal_sha256': inputs.reference_sha256, 'gsi_used_for_inference': False,
         'skill_audibility_verified': False, 'accuracy_verified': False,

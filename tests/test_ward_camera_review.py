@@ -3,10 +3,105 @@ from copy import deepcopy
 import hashlib,json,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
-from dota2_insights.ward_camera_review import review,discover_and_review
+from dota2_insights.ward_camera_review import (
+    _alt_motion_summary, _record_alt_motion, _return_motion_attachment, discover_and_review, review,
+)
+from dota2_insights.ward_ground_pose import GroundPoseReview
 
 
 class WardCameraReviewTests(unittest.TestCase):
+    def test_alt_motion_requires_same_scope_order_and_three_distinct_images(self):
+        motion={}
+        rows=[]
+        for i in range(3):
+            row={'kind':'location','frame_id':f'frame-{i}','captured_monotonic':10.+.5*i,
+                 'width':2560,'height':1440,'reference_epoch':1,
+                 'context':{'match_id':None,'game_session_id':'game','record_session_id':'record',
+                            'gsi_source_id':f'gsi-{i}'},
+                 'image':{'file':f'frame-{i}.jpg'},
+                 'alt_motion_window':{'version':'ward_alt_motion_window_v1','id':'a'*32,'index':i,
+                                      'alt_requested':True,'camera_cut_verified':False}}
+            rows.append(row)
+            _record_alt_motion(motion,row,2)
+            self.assertEqual(_alt_motion_summary(motion)['complete_image_windows'],int(i==2))
+        self.assertFalse(_alt_motion_summary(motion)['camera_cut_verified'])
+        motion={}
+        _record_alt_motion(motion,rows[0],2)
+        bad=deepcopy(rows[1]);bad['context']['game_session_id']='other'
+        with self.assertRaisesRegex(ValueError,'window_order'):
+            _record_alt_motion(motion,bad,2)
+        bad=deepcopy(rows[1]);bad['alt_motion_paint_status']='paint_candidate_recorded'
+        with self.assertRaisesRegex(ValueError,'paint_status'):
+            _record_alt_motion(motion,bad,2)
+        rows[1]['alt_motion_paint_status']='no_prior_paint'
+        del rows[1]['image']
+        for row in rows[1:]:
+            _record_alt_motion(motion,row,2)
+        self.assertEqual(_alt_motion_summary(motion)['complete_image_windows'],0)
+        self.assertEqual(_alt_motion_summary(motion)['windows'][0]['frames'][1]['paint_status'],'no_prior_paint')
+
+    def test_alt_motion_pixel_return_is_conditional_and_flat_frames_stay_unknown(self):
+        import numpy as np
+        from dota2_insights.ward_alt_motion_pixels import classify
+
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest('optional local image backend')
+
+        def terrain(seed):
+            rng=np.random.default_rng(seed)
+            image=np.full((360,640,3),45,dtype=np.uint8)
+            for x,y,r,color in zip(rng.integers(18,622,400),rng.integers(15,345,400),
+                                   rng.integers(2,13,400),rng.integers(70,255,400)):
+                cv2.circle(image,(int(x),int(y)),int(r),(int(color),)*3,-1,cv2.LINE_AA)
+            return image
+
+        first,middle=terrain(17),terrain(20)
+        last=np.roll(first,2,axis=1)
+        with patch('dota2_insights.ward_alt_motion_pixels.read_rgb',side_effect=[first,middle,last]):
+            result=classify([1,2,3],(640,360))
+        self.assertEqual(result['state'],'view_return_candidate')
+        self.assertFalse(result['camera_cut_verified'])
+        self.assertFalse(result['ward_world_alignment_verified'])
+        with patch('dota2_insights.ward_alt_motion_pixels.read_rgb',return_value=np.zeros_like(first)):
+            self.assertEqual(classify([1,2,3],(640,360))['state'],'insufficient_texture')
+
+    def test_alt_return_checks_painted_markers_against_unchanged_terrain(self):
+        import numpy as np
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest('optional local image backend')
+        rng=np.random.default_rng(519)
+        ground=np.full((540,960,3),60,dtype=np.uint8)
+        for x,y,r,c in zip(rng.integers(50,910,900),rng.integers(40,500,900),
+                           rng.integers(3,16,900),rng.integers(30,150,900)):
+            cv2.circle(ground,(int(x),int(y)),int(r),(int(c),)*3,-1,cv2.LINE_AA)
+
+        def paint(dx,frame):
+            pixels=ground.copy()
+            markers={'render_frame_id':frame,'points':{},'footprints':{}}
+            for key,(x,y) in {'obs':(390+dx,240),'sentry':(530+dx,285)}.items():
+                polygon=[[x-16,y-13],[x+16,y-13],[x+16,y+13],[x-16,y+13]]
+                markers['points'][key]=[x,y]
+                markers['footprints'][key]=polygon
+                border=np.zeros(ground.shape[:2],dtype=np.uint8)
+                cv2.polylines(border,[np.asarray(polygon)],True,255,2)
+                mask=border!=0
+                pixels[mask]=.42*pixels[mask]+.58*np.array((140,222,255))
+            return pixels,markers
+
+        first,old=paint(0,'first_render')
+        for shift,expected in ((0,'relative_attachment_observed'),(24,'painted_marker_terrain_disagreement')):
+            last,new=paint(shift,'last_render')
+            paints={'first':('same',old),'last':('same',new)}
+            files=['first','middle','last']
+            with patch('dota2_insights.ward_minimap_pixels.read_rgb',side_effect=[first,last]):
+                result=_return_motion_attachment(files,(960,540),dict(zip(files,files)),paints)
+            self.assertEqual(result['status'],expected)
+            self.assertFalse(result['absolute_world_alignment_verified'])
+
     def orientation_event(self):
         import math
         event=self.native_event();base=event['telemetry']
@@ -129,6 +224,66 @@ class WardCameraReviewTests(unittest.TestCase):
         self.assertFalse(result['surface_linkage']['os_visibility_verified'])
         self.assertEqual(result['registration_error_px']['median'],.25)
         self.assertEqual(result['projection_summary']['stored_marker_observations'],1)
+
+    def test_calibrated_minimap_retained_pairs_require_matching_scope_packet_and_pixels(self):
+        import numpy as np
+        from PIL import Image
+        from dota2_insights.ward_minimap_pixels import OPACITY, PALETTE
+
+        self.v2_image()
+        points = [{'id': f'ward-{x}-{y}', 'x': float(x), 'y': float(y), 'color': '#ff4141',
+                   'surface': 'minimap', 'tree_cross': False}
+                  for x in (40,70,100,130) for y in (500,530,560,590)]
+        rows=[];image_files={}
+        for index,shown in enumerate((False,True,False),1):
+            row=deepcopy(self.row)
+            now=100.+index
+            row.update(frame_id=f'frame-{index}',captured_monotonic=now,reference_epoch=2,
+                reference_packet_sha256='b'*64,
+                calibrated_minimap={'reason':'minimap_calibrated_hud_confirmed',
+                    'minimap_markers':deepcopy(points)},
+                calibrated_minimap_surface_sample={'shown':shown,'alt_held':shown,
+                    'changed_monotonic':now-.2,'render_frame_id':f'render-{index}'})
+            name=f'frame-{index:04d}.jpg'
+            path = self.run / name
+            pixels = np.full((720,1280,3), (38,52,70), dtype=np.uint8)
+            if shown:
+                for point in points:
+                    x, y = int(point['x']), int(point['y'])
+                    block = pixels[y-2:y+3,x-2:x+3]
+                    block[:] = np.round(block*(1-OPACITY)+np.asarray(PALETTE[point['color']])*OPACITY)
+            Image.fromarray(pixels).save(path, quality=90)
+            content = path.read_bytes()
+            image_files[name]={'bytes':len(content),'sha256':hashlib.sha256(content).hexdigest()}
+            row['image'].update(file=name,**image_files[name])
+            rows.append(row)
+        def save():
+            self.save_events(rows)
+            self.header['files'].update(image_files);self.header['images_saved']=len(image_files)
+            self.save_header()
+        save()
+        result=review(self.run)['calibrated_minimap']
+        self.assertFalse(result['pixel_visibility_verified'])
+        self.assertEqual(result['retained_surface_frames'],3)
+        self.assertEqual(result['pixel_comparisons'], [])
+        self.assertEqual(result['candidate_composited_pairs'],[
+            {'shown_image':'frame-0002.jpg','hidden_image':f'frame-{index:04d}.jpg',
+             'capture_gap_s':1.,'transition':transition,'marker_count':16}
+            for index,transition in ((1,'press'), (3,'release'))])
+        checked=discover_and_review({'helper_history':self.root}, analyze_minimap_pixels=True)
+        results=checked['reports'][0]['calibrated_minimap']['pixel_results_by_transition']
+        self.assertEqual(results, {edge:{'distributed_marker_color_pattern_observed':1}
+                                   for edge in ('press','release')})
+        rows[2]['calibrated_minimap_surface_sample']['changed_monotonic']=101.5
+        save()
+        self.assertEqual([pair['transition'] for pair in review(self.run)['calibrated_minimap']['candidate_composited_pairs']], ['press'])
+        rows[1]['calibrated_minimap']['minimap_markers'][0]['x']+=1
+        save()
+        self.assertEqual(review(self.run)['calibrated_minimap']['candidate_composited_pairs'],[])
+        rows[1]['calibrated_minimap_surface_sample']['alt_held']=False
+        save()
+        with self.assertRaisesRegex(ValueError,'ward_calibrated_minimap_surface_sample'):
+            review(self.run)
     def test_source_mismatch_never_joins_by_equal_time_or_frame(self):
         surface=self.surface();surface['context']['gsi_source_id']='gsi_'+'e'*32
         self.save_events([self.located(),surface]);result=review(self.run)['surface_linkage']
@@ -326,6 +481,100 @@ class WardCameraReviewTests(unittest.TestCase):
         self.assertEqual(result['native_camera_summary']['complete_camera_pairs'],0)
         self.assertFalse(result['native_camera_summary']['world_to_screen_verified'])
 
+    def test_native_transition_recomputes_distance_and_requires_prior_image(self):
+        from dota2_insights.ward_camera_review import _native_transition_links
+        old=self.native_event()['telemetry']
+        new={**old,'look_at_xy':[old['look_at_xy'][0]+256.,old['look_at_xy'][1]],'log_observed_monotonic':102.}
+        base={**self.row,'captured_monotonic':100.1,'frame_id':'before','image':{'file':'frame-0001.jpg'},
+              'native_camera_telemetry':{'candidate':old}}
+        current={**base,'captured_monotonic':102.1,'frame_id':'after','image':{'file':'frame-0002.jpg'},
+                 'native_camera_telemetry':{'candidate':new}}
+        sample={'version':'native_camera_transition_pair_v1','before_frame_id':'before',
+                 'before_captured_monotonic':100.1,'look_at_delta_world_units':256.,
+                 'capture_frame_alignment_verified':False}
+        current['native_camera_transition_sample']=sample
+        pairs=_native_transition_links([(1,base),(2,current)],[],6)
+        self.assertEqual(pairs[0]['frame_gap_s'],2.)
+        self.assertFalse(pairs[0]['both_exact_position_events_present'])
+        with self.assertRaisesRegex(ValueError,'transition_before_image'):
+            _native_transition_links([(1,current),(2,base)],[],6)
+        sample['look_at_delta_world_units']=257.
+        with self.assertRaisesRegex(ValueError,'transition_scope_or_geometry'):
+            _native_transition_links([(1,base),(2,current)],[],6)
+
+    def test_installed_map_boundary_receipt_never_authorizes_frame_binding(self):
+        self.native_header();self.save_events([self.native_event()])
+        self.assertIsNone(review(self.run)['installed_map_evidence'])
+        fingerprint={'bytes':123,'sha256':'e'*64}
+        base={'schema_version':1,'asset':'game/dota/maps/dota.vpk','status':'same_on_disk_at_boundaries',
+              'entry':fingerprint,'exit':dict(fingerprint),'same_file_stat_at_boundaries':True,
+              'runtime_map_identity_verified':False,'capture_map_binding_verified':False}
+        self.header['installed_map_evidence']=base;self.save_header()
+        result=review(self.run)
+        self.assertEqual(result['installed_map_evidence'],base)
+        self.assertFalse(result['native_calibration_readiness']['calibration_ready'])
+        roots={'helper_history':self.root}
+        for target,relation in (('e'*64,'both_boundaries_match_target'),('f'*64,'both_boundaries_differ_from_target')):
+            inspected=discover_and_review(roots,target_map_sha256=target)
+            self.assertEqual(inspected['reports'][0]['installed_map_relation'],relation)
+            self.assertFalse(inspected['reports'][0]['native_calibration_readiness']['calibration_ready'])
+            self.assertEqual(inspected['target_map_review']['run_counts'],{relation:1})
+            self.assertFalse(inspected['target_map_review']['capture_map_binding_verified'])
+        self.header['installed_map_evidence']={**base,'status':'changed_on_disk',
+            'exit':{'bytes':123,'sha256':'f'*64},'same_file_stat_at_boundaries':False}
+        self.save_header()
+        self.assertEqual(discover_and_review(roots,target_map_sha256='e'*64)['target_map_review']['run_counts'],
+                         {'installation_changed_during_run':1})
+        for invalid in ({**base,'capture_map_binding_verified':True},
+                        {**base,'exit':{'bytes':123,'sha256':'f'*64}},
+                        {**base,'status':'probe_incomplete'}):
+            self.header['installed_map_evidence']=invalid;self.save_header()
+            with self.subTest(invalid=invalid),self.assertRaisesRegex(ValueError,'ward_installed_map'):
+                review(self.run)
+
+    def test_saved_image_links_exact_receipt_but_never_claims_same_frame(self):
+        self.v2_image()
+        position = self.native_event()
+        orientation = self.orientation_event()
+        self.row.update(captured_monotonic=100.1, native_camera_telemetry={
+            'version': 'alt_camera_position_v1', 'projection_ready': False, 'live_usable': False,
+            'game_control_sent': False, 'candidate_recent': True, 'candidate': position['telemetry'],
+            'candidate_age_since_log_visible_s': .1})
+        mismatch = deepcopy(position)
+        mismatch['context']['gsi_source_id'] = 'gsi_' + 'e'*32
+        unrelated = self.orientation_event()
+        unrelated['telemetry']['position_candidate']['read_chunk_sha256'] = 'b'*64
+        later = self.orientation_event()
+        later['telemetry'].update(log_observed_monotonic=100.2, press_to_log_visible_candidate_ms=280.)
+        competing = self.native_event()
+        competing['telemetry'].update(log_observed_monotonic=100.05,
+            press_to_log_visible_candidate_ms=130., alt_epoch=2, read_chunk_sha256='c'*64)
+        for key in ('camera_xyz', 'look_at_xy'):
+            competing['telemetry'][key][0] += 100
+        after_capture = deepcopy(competing)
+        after_capture['telemetry'].update(log_observed_monotonic=100.2, press_to_log_visible_candidate_ms=280.)
+        image = self.row['image']
+        for events, status, linked in (
+                ([position, orientation], 'orientation_receipt_available_before_frame', True),
+                ([position, later], 'orientation_observed_after_frame', True),
+                ([position, unrelated], 'orientation_event_missing', True),
+                ([position, orientation, orientation], 'orientation_event_ambiguous', True),
+                ([position, orientation, competing], 'competing_position_receipt_before_frame', False),
+                ([position, orientation, after_capture], 'orientation_receipt_available_before_frame', True),
+                ([mismatch, orientation], 'position_event_missing', False),
+                ([position, position, orientation], 'position_event_ambiguous', False)):
+            with self.subTest(status=status):
+                self.save_events([*events, self.row])
+                self.header['files'][image['file']] = {k: image[k] for k in ('bytes', 'sha256')}
+                self.save_header()
+                result = review(self.run)['native_calibration_readiness']
+                links = result['image_log_linkage']
+                self.assertEqual(links['counts'].get('images_with_position_receipt_verified', 0), int(linked))
+                self.assertEqual(links['counts'][status], 1)
+                self.assertFalse(links['capture_frame_alignment_verified'])
+                self.assertFalse(result['calibration_ready'])
+
+
     def test_native_unknown_geometry_bool_vectors_bad_clocks_or_projections_refused(self):
         self.native_header()
         for key,value in [('look_at_z',0),('fov_degrees',70),('live_usable',True),
@@ -348,5 +597,63 @@ class WardCameraReviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):review(self.run)
         self.save_events([event]*129)
         with self.assertRaisesRegex(ValueError,'native_camera_event_limit'):review(self.run)
+
+class GroundPoseEvidenceTests(unittest.TestCase):
+    def test_stationary_image_requires_distinct_surrounding_pose_samples(self):
+        for label,second_id,second_x,second_game,second_time,expected in (
+            ('stationary','next',200,'game-1',11.,1),
+            ('moves','next',250,'game-1',11.,0),
+            ('repeated','before',200,'game-1',11.,0),
+            ('new_game','next',200,'game-2',11.,0),
+            ('expired','next',200,'game-1',13.,0),
+        ):
+            with self.subTest(label=label):
+                probe=GroundPoseReview()
+                first={'context':{'game_session_id':'game-1','record_session_id':'run-1','gsi_source_id':'before',
+                    'own_hero_pose':{'alive':True,'hero_id':'npc_dota_hero_axe','xpos':200,'ypos':320,
+                                     'coordinate_basis':'gsi_centered_world_xy'}},
+                    'image':{'file':'frame-0001.jpg'},'width':1280,'height':720,
+                    'self_screen_anchor':{'x':500,'y':300}}
+                probe.add(first,10.5,10.)
+                second={'context':deepcopy(first['context'])}
+                second['context'].update(gsi_source_id=second_id,game_session_id=second_game)
+                second['context']['own_hero_pose']['xpos']=second_x
+                probe.add(second,second_time,second_time)
+                result=probe.summary()
+                self.assertEqual(len(result['bracketed_same_position']),expected)
+                self.assertEqual(result['bracketed_measured_ring_count'],0)
+                self.assertFalse(result['world_to_image_alignment_verified'])
+
+    def test_partial_ring_pixels_reject_solid_disc_and_short_arcs(self):
+        import cv2
+        import numpy as np
+        from dota2_insights.ward_partial_ring import locate
+
+        for label,arc,stroke,color,expected in (
+            ('partial',210,1,(236,236,236),True),
+            ('short',95,1,(236,236,236),False),
+            ('solid',360,-1,(236,236,236),False),
+            ('colored',360,1,(40,155,230),False),
+        ):
+            with self.subTest(label=label):
+                image=np.full((1440,2560,3),(36,61,65),np.uint8)
+                cv2.ellipse(image,(1080,800),(68,55),8,30,30+arc,color,stroke,cv2.LINE_AA)
+                candidate=locate(image,(1060,750))['candidate']
+                self.assertEqual(candidate is not None,expected)
+                if candidate is not None:
+                    np.testing.assert_allclose(candidate['center_xy'],[1080,800],atol=1)
+                    self.assertFalse(candidate['ownership_verified'])
+
+
+class TerrainPatchPixelEvidenceTests(unittest.TestCase):
+    def test_still_drawn_points_are_admitted_as_a_candidate_disagreement_pair(self):
+        from dota2_insights.ward_camera_review import _terrain_patch_pairs
+
+        same_pixels={'points':{'a':[500,300],'b':[600,320]}}
+        self.assertEqual(_terrain_patch_pairs([
+            ('same capture','a.jpg',same_pixels),('same capture','b.jpg',same_pixels),
+            ('different capture','c.jpg',same_pixels),
+        ]),[{'images':['a.jpg','b.jpg'],'marker_displacements_px':{}}])
+
 
 if __name__=='__main__':unittest.main()

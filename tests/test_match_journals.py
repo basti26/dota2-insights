@@ -71,7 +71,7 @@ class MatchJournalTests(unittest.TestCase):
             verify(self.folder)
 
     def test_foreign_identity_sequence_or_nonterminal_tail_refused_even_with_new_sha(self):
-        for field, value in (('match_id', '54321'), ('sequence', 1),
+        for field, value in (('match_id', '54321'), ('sequence', 1), ('map_context', ['POST_GAME']),
                              ('map_context', {'game_state': 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS'})):
             with self.subTest(field=field):
                 self.rows[-1] = {**self.row(2, True), field: value}

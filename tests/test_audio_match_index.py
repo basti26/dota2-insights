@@ -100,7 +100,9 @@ class AudioMatchIndexTests(unittest.TestCase):
         with patch('dota2_insights.match_journal_index.os.replace',side_effect=OSError('generated')):
             with self.assertRaises(OSError):sync(self.project,self.roots)
         self.assertEqual(before,(folder/'index.json').read_bytes())
-        self.assertFalse((folder/'sync.lock').exists())
+        from dota2_insights.match_journal_index import index_destination
+        with index_destination(self.project, self.roots, 'audio-match-handoff'):
+            pass  # A failed writer released its kernel lease.
         self.assertFalse(list(folder.glob('*.tmp')))
 
     def test_incomplete_manifest_becomes_unavailable_not_zero_audio(self):

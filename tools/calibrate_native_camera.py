@@ -18,13 +18,23 @@ def main():
     with args.input.open('rb') as stream:raw=stream.read(1024*1024+1)
     if len(raw)>1024*1024:raise ValueError('calibration_input_limit')
     data=json.loads(raw)
-    if data.get('schema_version')!=1 or data.get('kind')!='explicit_native_camera_anchor_input':
+    if (not isinstance(data,dict) or type(data.get('schema_version')) is not int or data['schema_version']!=1
+            or data.get('kind') not in ('explicit_native_camera_anchor_input','explicit_native_orientation_anchor_input')):
         raise ValueError('calibration_input_version')
-    from dota2_insights.native_camera_calibration import fit
-    result=fit(data.get('native_position'),data.get('anchors'),data.get('native_viewport'),
-               region_check=data.get('region_check'))
-    with args.input.open('rb') as stream:
-        if stream.read(1024*1024+1)!=raw:raise ValueError('calibration_input_changed')
+    from dota2_insights.native_camera_calibration import fit,fit_orientation
+    from dota2_insights.native_camera_image import open_image_reference
+    oriented=data['kind']=='explicit_native_orientation_anchor_input'
+    with open_image_reference(args.input.parent,data.get('image_reference'),data.get('native_viewport'),
+                              required=oriented) as image_receipt:
+        if oriented:
+            result=fit_orientation(data.get('native_orientation'),data.get('anchors'),data.get('native_viewport'),
+                                   region_check=data.get('region_check'))
+        else:
+            result=fit(data.get('native_position'),data.get('anchors'),data.get('native_viewport'),
+                       region_check=data.get('region_check'))
+        with args.input.open('rb') as stream:
+            if stream.read(1024*1024+1)!=raw:raise ValueError('calibration_input_changed')
+    result.update(image_receipt)
     result.update(input_sha256=hashlib.sha256(raw).hexdigest(),
                   installed=False,live_projection_enabled=False)
     with args.output.open('x',encoding='utf-8') as stream:

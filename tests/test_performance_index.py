@@ -122,7 +122,9 @@ class PerformanceIndexTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 indexer.sync(self.project, self.roots)
         self.assertEqual(before, (folder/'index.json').read_bytes())
-        self.assertFalse((folder/'sync.lock').exists())
+        from dota2_insights.match_journal_index import index_destination
+        with index_destination(self.project, self.roots, 'performance-match-handoff'):
+            pass  # A failed writer released its kernel lease.
         self.assertFalse(list(folder.glob('*.tmp')))
 
     def test_reserved_budget_blocks_before_opening_large_sources(self):

@@ -12,11 +12,16 @@ import wave
 
 VERDICTS = ('unreviewed', 'audible', 'not_audible', 'uncertain')
 PHASES = ('unknown', 'cast', 'impact', 'sustain', 'end', 'mixed')
+BLIND_PURPOSE = 'independent_pcm_window_listening_only'
+BLIND_CONTEXT_POLICY = 'fixed_target_predictions_and_GSI_hidden'
+BLIND_TARGET = 'item_black_king_bar'
 PURPOSES = ('post_prediction_replay_review_only',
             'posthoc_listening_only_never_template_training_or_accuracy_labels',
-            'post_prediction_candidate_diversity_review_only')
+            'post_prediction_candidate_diversity_review_only',
+            BLIND_PURPOSE)
 CONTEXT_POLICIES = ('replay_or_GSI_context_visible_not_blind_not_independent',
-                    'candidate_context_visible_not_blind_not_independent')
+                    'candidate_context_visible_not_blind_not_independent',
+                    BLIND_CONTEXT_POLICY)
 
 
 def sha(body):
@@ -39,7 +44,7 @@ def utc():
     return datetime.now(timezone.utc).isoformat()
 
 
-def clip_bytes(folder, filename, fingerprint):
+def clip_bytes(folder, filename, fingerprint, *, blind=False):
     if (not isinstance(filename, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,100}\.wav', filename)
             or not isinstance(fingerprint, str) or not re.fullmatch(r'[a-f0-9]{64}', fingerprint)):
         raise ValueError('invalid_listening_clip_reference')
@@ -56,6 +61,8 @@ def clip_bytes(folder, filename, fingerprint):
         if (not 1 <= channels <= 2 or width not in (1, 2, 3, 4) or not 8000 <= rate <= 192000
                 or not 0 < frames / rate <= 10):
             raise ValueError('unsupported_listening_clip_format')
+        if blind and (frames, rate, channels, width) != (32000, 16000, 1, 2):
+            raise ValueError('invalid_blind_listening_pcm')
         if len(stream.readframes(frames)) != frames * channels * width:
             raise ValueError('truncated_listening_clip')
     return body, frames / rate
@@ -65,13 +72,20 @@ def build_listening_page(review_path, output):
     review_path, output = Path(review_path).resolve(), Path(output).resolve()
     value, source = read_json(review_path)
     if (not isinstance(value, dict) or type(value.get('schema_version')) is not int or value['schema_version'] != 1
-            or value.get('purpose') not in PURPOSES
-            or not re.fullmatch(r'[a-f0-9]{64}', str(value.get('prediction_sha256', '')))):
+            or value.get('purpose') not in PURPOSES):
+        raise ValueError('frozen_post_prediction_review_required')
+    blind = value['purpose'] == BLIND_PURPOSE
+    if blind:
+        if (value.get('target') != BLIND_TARGET or value.get('source_verified_before_and_after') is not True
+                or not re.fullmatch(r'[a-f0-9]{64}', str(value.get('source_package_id', '')))):
+            raise ValueError('verified_blind_listening_source_required')
+    elif not re.fullmatch(r'[a-f0-9]{64}', str(value.get('prediction_sha256', ''))):
         raise ValueError('frozen_post_prediction_review_required')
     rows = value.get('casts') if value['purpose'] == PURPOSES[0] else value.get('clips')
     if not isinstance(rows, list) or not 1 <= len(rows) <= 2000:
         raise ValueError('invalid_listening_source_rows')
     clips, bodies, seen, total = [], [], set(), 0
+    blind_spans, blind_digests = {}, set()
     for row_index, row in enumerate(rows, 1):
         if not isinstance(row, dict):
             raise ValueError('invalid_listening_source_row')
@@ -79,17 +93,32 @@ def build_listening_page(review_path, output):
             continue
         if len(clips) >= 40 or row['clip'] in seen:
             raise ValueError('listening_clip_count_or_duplicate')
-        body, seconds = clip_bytes(review_path.parent, row['clip'], row.get('clip_sha256'))
+        body, seconds = clip_bytes(review_path.parent, row['clip'], row.get('clip_sha256'), blind=blind)
+        fingerprint = row['clip_sha256']
+        if blind:
+            take, start, frames = (row.get(key) for key in ('take_id', 'from_frame', 'frames'))
+            if (not isinstance(take, str) or not re.fullmatch('[a-f0-9]{32}', take)
+                    or type(start) is not int or not 0 <= start <= 14400 * 16000
+                    or type(frames) is not int or frames != 32000):
+                raise ValueError('invalid_blind_listening_window')
+            spans = blind_spans.setdefault(take, [])
+            end = start + frames
+            if any(start < other_end and other_start < end for other_start, other_end in spans):
+                raise ValueError('overlapping_blind_listening_windows')
+            if fingerprint in blind_digests:
+                raise ValueError('duplicate_blind_listening_audio')
+            spans.append((start, end))
+            blind_digests.add(fingerprint)
         total += len(body)
         if total > 64 * 1024**2:
             raise ValueError('listening_total_size_limit')
-        skill, game_time = row.get('skill'), row.get('game_time_s')
+        skill, game_time = (BLIND_TARGET, None) if blind else (row.get('skill'), row.get('game_time_s'))
         if not isinstance(skill, str) or not re.fullmatch(r'[a-z0-9_]{1,120}', skill):
             raise ValueError('invalid_listening_skill')
         if game_time is not None and (type(game_time) not in (int, float) or not math.isfinite(game_time)):
             raise ValueError('invalid_listening_game_clock')
         clip_id = f'clip-{len(clips) + 1:03d}'
-        clips.append({'clip_id': clip_id, 'file': clip_id + '.wav', 'sha256': sha(body),
+        clips.append({'clip_id': clip_id, 'file': clip_id + '.wav', 'sha256': fingerprint,
                       'duration_s': seconds, 'source_row': row_index, 'skill': skill,
                       'game_time_s': game_time})
         bodies.append(body)
@@ -98,12 +127,14 @@ def build_listening_page(review_path, output):
         raise ValueError('empty_or_changed_listening_source')
     # Validate all input before creating a new package; never overwrite source.
     output.mkdir(parents=True, exist_ok=False)
+    context_policy = CONTEXT_POLICIES[1] if value['purpose'] == PURPOSES[2] else CONTEXT_POLICIES[0]
     manifest = {'kind': 'audio_listening_review', 'schema_version': 1, 'created_at_utc': utc(),
                 'status': 'preparing', 'review_source_sha256': sha(source),
-                'prediction_sha256': value['prediction_sha256'], 'match_id': value.get('match_id'),
-                'context_policy': CONTEXT_POLICIES[1] if value['purpose'] == PURPOSES[2] else CONTEXT_POLICIES[0],
+                'context_policy': BLIND_CONTEXT_POLICY if blind else context_policy,
                 'training_eligible': False, 'accuracy_verified': False,
                 'builder_source_sha256': sha(Path(__file__).read_bytes()), 'clips': clips}
+    if not blind:
+        manifest.update(prediction_sha256=value['prediction_sha256'], match_id=value.get('match_id'))
     write_json(output / 'manifest.json', manifest)
     for clip, body in zip(clips, bodies):
         (output / clip['file']).write_bytes(body)
@@ -113,9 +144,11 @@ def build_listening_page(review_path, output):
     payload = json.dumps({'manifest_sha256': binding, 'clips': clips,
                           'context_policy': manifest['context_policy']}, ensure_ascii=False, allow_nan=False)
     payload = payload.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
-    description = ('这是已冻结的音频候选分层抽样，未提供录像/GSI施法真值；请判断指定声音是否清楚可闻。'
-                   if value['purpose'] == PURPOSES[2] else
-                   '这是带录像/GSI上下文的辅助听审。请判断指定声音是否清楚可闻，不确定就保留“无法判断”。')
+    description = {
+        BLIND_CONTEXT_POLICY: '片段从录音时间轴独立抽取。请判断是否听到黑皇杖的启动音，听不清时请选择“无法判断”。',
+        CONTEXT_POLICIES[1]: '这是已冻结的音频候选分层抽样，未提供录像/GSI施法真值；请判断指定声音是否清楚可闻。',
+        CONTEXT_POLICIES[0]: '这是带录像/GSI上下文的辅助听审。请判断指定声音是否清楚可闻，不确定就保留“无法判断”。',
+    }[manifest['context_policy']]
     (output / 'index.html').write_text(PAGE.replace('__PAYLOAD__', payload).replace('__DESCRIPTION__', description), encoding='utf-8')
     # Readiness is published only after every clip and the page exist.
     (output / 'manifest.json').write_bytes(completed)
@@ -135,12 +168,15 @@ def import_listening_notes(page, labels_path):
     if not isinstance(clips, list) or not 1 <= len(clips) <= 40:
         raise ValueError('invalid_listening_package_clips')
     expected = {}
+    blind = manifest['context_policy'] == BLIND_CONTEXT_POLICY
     for index, clip in enumerate(clips, 1):
         key = f'clip-{index:03d}'
         if not isinstance(clip, dict) or clip.get('clip_id') != key or clip.get('file') != key + '.wav':
             raise ValueError('invalid_listening_package_clip')
-        clip_bytes(page, clip['file'], clip.get('sha256'))
+        clip_bytes(page, clip['file'], clip.get('sha256'), blind=blind)
         expected[key] = clip['sha256']
+    if blind and len(set(expected.values())) != len(expected):
+        raise ValueError('duplicate_blind_listening_audio')
     value, label_body = read_json(labels_path, 1024**2)
     if (not isinstance(value, dict) or value.get('kind') != 'audio_listening_notes'
             or type(value.get('schema_version')) is not int or value['schema_version'] != 1
@@ -171,6 +207,8 @@ def import_listening_notes(page, labels_path):
     counts = dict(Counter(row['verdict'] for row in notes))
     if counts.get('unreviewed', 0) == len(notes):
         raise ValueError('no_reviewed_listening_notes')
+    for key, fingerprint in expected.items():
+        clip_bytes(page, key + '.wav', fingerprint, blind=blind)
     if (page / 'manifest.json').read_bytes() != original:
         raise ValueError('listening_package_changed')
     labels_root = page / 'notes'
@@ -182,8 +220,10 @@ def import_listening_notes(page, labels_path):
               'manifest_sha256': sha(original), 'submitted_json_sha256': sha(label_body),
               'importer_source_sha256': sha(Path(__file__).read_bytes()),
               'context_policy': manifest['context_policy'], 'training_eligible': False,
-              'accuracy_verified': False, 'counts': counts, 'notes': notes,
-              'limitations': ['Context-visible subjective notes, not independent blind truth.',
+              'accuracy_verified': False, 'clips_verified_before_and_after': True, 'counts': counts, 'notes': notes,
+              'limitations': [('Fixed-target listening notes require independent adjudication before scoring.'
+                               if manifest['context_policy'] == BLIND_CONTEXT_POLICY else
+                               'Context-visible subjective notes, not independent blind truth.'),
                              'Not audible is not proof that a skill was unused.',
                              'No accuracy, recall or false-positive rate inferred.']}
     write_json(output / 'notes.json', result)
@@ -202,7 +242,7 @@ const controls=[];let restoreGeneration=0;function node(tag,text){const e=docume
 function gameClock(time){if(typeof time!=='number'||!Number.isFinite(time))return '未知';const seconds=Math.floor(Math.abs(time));return (time<0?'-':'')+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')}
 function progress(){document.getElementById('progress').textContent=' 已复听判断 '+notes.filter(n=>n.verdict!=='unreviewed').length+' / '+notes.length}
 function choice(options){const select=node('select');options.forEach(([value,text])=>{const o=node('option',text);o.value=value;select.append(o)});return select}
-data.clips.forEach((c,i)=>{const n=notes[i],article=node('article');article.append(node('h2',(i+1)+' / '+(names[c.skill]||c.skill)));article.append(node('p','录像/GSI旁证时间：'+gameClock(c.game_time_s)+' · 片段 '+c.duration_s.toFixed(1)+' 秒（旁证不等于声音可闻）'));
+data.clips.forEach((c,i)=>{const n=notes[i],article=node('article'),blind=policy==='fixed_target_predictions_and_GSI_hidden';article.append(node('h2',blind?'片段 '+(i+1):(i+1)+' / '+(names[c.skill]||c.skill)));article.append(node('p',blind?c.duration_s.toFixed(1)+' 秒':'录像/GSI旁证时间：'+gameClock(c.game_time_s)+' · 片段 '+c.duration_s.toFixed(1)+' 秒（旁证不等于声音可闻）'));
 const audio=node('audio');audio.controls=true;audio.preload='none';audio.src=c.file;article.append(audio);
 const verdict=choice([['unreviewed','尚未判断'],['audible','听到指定声音'],['not_audible','没听到指定声音'],['uncertain','无法判断']]);verdict.disabled=true;
 const phase=choice([['unknown','阶段不确定'],['cast','施放'],['impact','命中'],['sustain','持续'],['end','结束'],['mixed','多个阶段/混合']]);phase.disabled=true;

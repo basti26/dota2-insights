@@ -136,7 +136,9 @@ class MinimapIndexTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 sync(self.project, self.roots)
         self.assertEqual((folder / 'index.json').read_bytes(), old)
-        self.assertFalse((folder / 'sync.lock').exists())
+        from dota2_insights.match_journal_index import index_destination
+        with index_destination(self.project, self.roots, 'minimap-run-handoff'):
+            pass  # A failed writer released its kernel lease.
         self.assertFalse(list(folder.glob('.index-*.tmp')))
 
     def test_closed_launcher_overlap_is_marked_per_stream_without_match_binding(self):

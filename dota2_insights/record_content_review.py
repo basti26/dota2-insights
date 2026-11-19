@@ -11,7 +11,7 @@ import statistics
 
 from .closed_journals import ClosedJournals, explicit_match
 from .helper_handoff import utc
-from .self_economy_audit import SelfEconomyAudit
+from .self_economy_audit import SelfEconomyAudit, neutral_observation_summary, valuation_comparison_summary
 from .item_review_priorities import ItemReviewPriorities
 
 HERO = re.compile(r'npc_dota_hero_[a-z0-9_]{1,60}')
@@ -269,7 +269,8 @@ def render_markdown(reports):
         for match in report['matches']:
             mid = match['match_id']
             gsi, facts = report['own_gsi'].get(mid, {}), report['match_facts'].get(mid, {})
-            display = report.get('own_economy_audit', {}).get(mid, {}).get('display_checks', {})
+            economy_audit = report.get('own_economy_audit', {}).get(mid, {})
+            display = economy_audit.get('display_checks', {})
             lines += [f"### 比赛 {mid or '本地会话'}", '',
                 f"结束证据：{match['match_end_evidence']}",
                 f"本人GSI：{gsi.get('rows', '未知')}行；金额可用{gsi.get('available_rows', '未知')}行。",
@@ -277,7 +278,9 @@ def render_markdown(reports):
                 f"本人英雄：{', '.join(gsi.get('heroes', {})) or '未知'}",
                 f"金额分项加总不一致：{gsi.get('arithmetic_disagreement_count', '未知')}（可比分项记录{gsi.get('arithmetic_comparable_rows', '未知')}）；相邻5秒内下降至少500：{gsi.get('large_decrease_count', '未知')}。下降不是识别错误判定。",
                 f"GSI估值状态：{dict(gsi.get('economy_status', {}))}",
-                f"同包显示核对：普通{display.get('normal_comparable_rows', '未知')}行、熊灵合计{display.get('bear_comparable_rows', '未知')}行；金额不符{display.get('amount_mismatches', '未知')}，熊灵来源不符{display.get('bear_provenance_issues', '未知')}。这里只核对记录字段，不代表游戏画面已核验。",
+                valuation_comparison_summary(display),
+                neutral_observation_summary(economy_audit),
+                '画面可见性未核验。',
                 f"显示不可比原因：{display.get('uncomparable_reasons', {})}",
                 f"视觉观测尝试：{dict(facts.get('observation_attempts', {}))}；其中本人英雄尝试{facts.get('own_hero_visual_attempts', '未知')}。",
                 f"识别耗时毫秒：{facts.get('recognition_ms', {})}",

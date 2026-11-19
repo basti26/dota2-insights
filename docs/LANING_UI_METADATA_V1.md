@@ -13,6 +13,6 @@ Foresight 在 `panel-visibility.jsonl` 的 v1 行中提供可选 `laning` 扩展
 
 JSON摘要附带来源行及哈希，分别统计 not_selected/loading/ready/unavailable 的控件状态变化。不同ready文字状态按会话、选择集合、提示覆盖、资料包与文字指纹去重，忽略滚动位置；该数量不是打开次数或阅读次数。资料包指纹仅为声明，本分析不重新认证助手安装资源。每个统计器最多处理4096条扩展，超过时标记预算不足。
 
-无扩展时 `status=not_recorded_unknown`，`unique_ready_text_states=null`。旧记录缺失不能解释为零次使用。非法扩展单独计数，不生成ready证据，不让未知身份或无效状态成为成功。
+无扩展时 `status=not_recorded_unknown`。收到扩展但全部核验失败时为 `invalid_metadata_only`，两种情况的 `unique_ready_text_states` 均为 null。有有效扩展时才统计其中不同的 ready 文字状态。旧记录缺失或无效都无法确认用户是否打开过对线页。
 
 验证：88项相关离线检查通过；独立生成的闭合BP组件覆盖可选流接收、来源会话不符拒收和来源SHA进出复验。助手生成的四状态模拟JSON通过版本化数据文件交换，输入SHA为 `4a9ba9654313151c6a800f1837ce0445039b214c511f0371e975878c194a5dc9`，四状态均被接收，证据在 `diagnostics/laning-interop-20261111/`。模拟互通不等于自然对局验收。

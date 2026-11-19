@@ -72,8 +72,8 @@ def verify(folder):
         raise ValueError('match_journal_health_invalid')
     if document.get('recording_integrity') != ('complete' if dropped == 0 and not limited else 'gaps'):
         raise ValueError('match_journal_health_disagrees')
-    payload = document.get('payload') or {}
-    if (payload.get('file') != 'samples.jsonl' or type(payload.get('bytes')) is not int
+    payload = document.get('payload')
+    if (not isinstance(payload, dict) or payload.get('file') != 'samples.jsonl' or type(payload.get('bytes')) is not int
             or not 0 < payload['bytes'] <= MAX_BYTES or type(payload.get('rows')) is not int
             or not 1 <= payload['rows'] <= 100000):
         raise ValueError('match_journal_payload_invalid')
@@ -102,8 +102,9 @@ def verify(folder):
         utc(received)
         seen_first = received if seen_first is None else seen_first
         seen_last = received
+    map_context = row.get('map_context')
     if (seen_first != document['first_received_at_utc'] or seen_last != document['last_received_at_utc']
-            or (row.get('map_context') or {}).get('game_state') != 'DOTA_GAMERULES_STATE_POST_GAME'):
+            or not isinstance(map_context, dict) or map_context.get('game_state') != 'DOTA_GAMERULES_STATE_POST_GAME'):
         raise ValueError('match_journal_end_not_proved')
     return document, digest
 

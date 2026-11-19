@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 from html import escape
 import json
+import os
 from pathlib import Path
 import subprocess
 import shutil
@@ -12,8 +13,11 @@ import uuid
 
 from .history import checked_output, history_roots
 from .replay_holdout import refuse_locked_match
+from .self_economy_audit import neutral_observation_summary, valuation_comparison_summary
 
 ROOT = Path(__file__).resolve().parents[1]
+REPORT_FILES = ('index.html', 'report.json', 'REPORT.md')
+REPORT_FILE_LIMIT = 64 * 1024**2
 
 
 def utc():
@@ -99,29 +103,89 @@ def replay_path(task, directories):
     return None
 
 
-def reusable_archive(root, mid, source, task, config):
+def file_stamp(stat):
+    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+
+
+def stable_digest(path, limit, check):
+    before = file_stamp(path.stat())
+    if not 0 < before[2] <= limit:
+        raise ValueError('automatic_replay_input_size_invalid')
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        opened = file_stamp(os.fstat(stream.fileno()))
+        # Windows may report different timestamp precision for path and handle.
+        if opened[:3] != before[:3]:
+            raise ValueError('automatic_replay_input_changed')
+        remaining = before[2]
+        while remaining:
+            check()
+            block = stream.read(min(remaining, 16 * 1024**2))
+            if not block:
+                raise ValueError('automatic_replay_input_changed')
+            remaining -= len(block)
+            digest.update(block)
+        if stream.read(1) or file_stamp(os.fstat(stream.fileno())) != opened:
+            raise ValueError('automatic_replay_input_changed')
+    if file_stamp(path.stat()) != before:
+        raise ValueError('automatic_replay_input_changed')
+    return digest.hexdigest(), before
+
+
+def archive_fingerprints(path, mid, source_sha, check, *, allow_window=False):
+    manifest_path, samples = path / 'manifest.json', path / 'hero_samples.jsonl'
+    if any(p.resolve(strict=True) != p for p in (manifest_path, samples)):
+        raise ValueError('automatic_archive_redirected')
+    before = file_stamp(manifest_path.stat())
+    with manifest_path.open('rb') as stream:
+        raw = stream.read(1024**2 + 1)
+    if len(raw) > 1024**2 or len(raw) != before[2] or file_stamp(manifest_path.stat()) != before:
+        raise ValueError('automatic_archive_manifest_unstable')
+    manifest = json.loads(raw)
+    allowed_stops = ('replay_eof', 'requested_game_window_end') if allow_window else ('replay_eof',)
+    if (not isinstance(manifest, dict) or manifest.get('kind') != 'offline_replay_archive'
+            or manifest.get('match_id') != mid or manifest.get('parsed_match_id') != mid
+            or manifest.get('source_sha256') != source_sha
+            or manifest.get('source_unchanged_stat') is not True or manifest.get('export_complete') is not True
+            or manifest.get('stop_reason') not in allowed_stops or manifest.get('parse_error') is not None
+            or manifest.get('truncated_at_tick') is not None
+            or not isinstance(manifest.get('counts', {}), dict)
+            or manifest.get('counts', {}).get('incomplete_sample_packets', 0) != 0):
+        raise ValueError('automatic_archive_manifest_invalid')
+    files = manifest.get('files')
+    row = files.get(samples.name) if isinstance(files, dict) else None
+    if not isinstance(row, dict) or type(row.get('bytes')) is not int or row['bytes'] != samples.stat().st_size:
+        raise ValueError('automatic_archive_sample_size_mismatch')
+    sha, stamp = stable_digest(samples, 256 * 1024**2, check)
+    if stamp[2] != row['bytes'] or sha != row.get('sha256') or file_stamp(manifest_path.stat()) != before:
+        raise ValueError('automatic_archive_sample_digest_mismatch')
+    return {'manifest_sha256': hashlib.sha256(raw).hexdigest(), 'samples_sha256': sha}
+
+
+def ready_archive(root, value, mid, source_sha, check, *, allow_window=False):
+    if not isinstance(value, str) or source_sha is None:
+        return None
+    try:
+        path = Path(value).resolve(strict=True)
+        if path.is_relative_to(root / 'diagnostics'):
+            return path, archive_fingerprints(path, mid, source_sha, check, allow_window=allow_window)
+    except InterruptedError:
+        raise
+    except (OSError, ValueError, RuntimeError):
+        pass
+    return None
+
+
+def reusable_archive(root, mid, source_sha, task, config, check):
     """Reuse validated data exports, never another checkout's Python runtime."""
-    allowed = root / 'diagnostics'
     configured = config.get('archive_directories', [])
     if not isinstance(configured, list) or len(configured) > 32:
         raise ValueError('automatic_archive_reuse_limit')
     candidates = ([task['archive']] if task.get('archive') else []) + configured
-    source_sha = None
-    for value in candidates:
-        path = Path(value).resolve()
-        if not path.is_relative_to(allowed) or not (path / 'manifest.json').is_file():
-            continue
-        manifest = read_json(path / 'manifest.json', 1024**2)
-        if (manifest.get('match_id') != mid or manifest.get('parsed_match_id') != mid
-                or manifest.get('source_unchanged_stat') is not True
-                or manifest.get('export_complete') is not True or manifest.get('stop_reason') != 'replay_eof'
-                or manifest.get('parse_error') is not None):
-            continue
-        if source_sha is None:
-            with source.open('rb') as stream:
-                source_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
-        if source_sha == manifest.get('source_sha256'):
-            return path  # Payload hashes are rechecked by the comparison reader.
+    for value in dict.fromkeys(value for value in candidates if isinstance(value, str)):
+        ready = ready_archive(root, value, mid, source_sha, check)
+        if ready is not None:
+            return ready
     return None
 
 
@@ -258,6 +322,7 @@ def compare_replay(roots, admitted, archive, output, check=guard, root=ROOT):
 
 def publish(output, report):
     """Publish only after all admitted source contexts have exited successfully."""
+    from .observation_runtime import render_markdown as runtime_lines
     output = Path(output)
     report.update(schema_version=1, generated_at_utc=utc(), accuracy_verified=False,
         visual_review_complete=False, meaning='automatic_evidence_review_not_ground_truth_or_live_correction')
@@ -269,10 +334,11 @@ def publish(output, report):
         audit = row['self_economy_audit']
         component = audit['component_checks']; display = audit['display_checks']
         lines += [f'本人GSI记录 {audit["rows"]} 行；分项可比 {component["comparable_rows"]}，不符 {component["mismatches"]}。',
-            f'同包显示可比 {display["normal_comparable_rows"]}，不符 {display["amount_mismatches"]}；无显示记录时不认证UI金额。', '']
+            valuation_comparison_summary(display), neutral_observation_summary(audit), '画面可见性未核验。', '']
     if not records.get('gsi'):
         lines += ['本人GSI闭合包未到齐；未当作金额一致或零问题。', '']
     for row in records.get('equipment', []):
+        lines.extend(runtime_lines(row.get('runtime_profile')))
         lines += [f'装备记录 {row["rows"]} 行；格状态：{row["slot_status_counts"]}。',
             f'大件中断：{row["equipment_continuity"]["counts"]}。',
             f'[打开大件前后图片]({row["continuity_page"]})', '']
@@ -301,37 +367,103 @@ def publish(output, report):
     return report
 
 
+def report_fingerprints(folder):
+    """Bind the three primary report files after publication."""
+    result = {}
+    for name in REPORT_FILES:
+        path = folder / name
+        if path.resolve(strict=True) != path:
+            raise ValueError('automatic_report_redirected')
+        size = path.stat().st_size
+        if not 0 < size <= REPORT_FILE_LIMIT:
+            raise ValueError('automatic_report_size_invalid')
+        digest = hashlib.sha256()
+        remaining = size
+        with path.open('rb') as stream:
+            while remaining:
+                block = stream.read(min(remaining, 1024**2))
+                if not block:
+                    raise ValueError('automatic_report_changed_during_read')
+                remaining -= len(block)
+                digest.update(block)
+            if stream.read(1):
+                raise ValueError('automatic_report_changed_during_read')
+        result[name] = digest.hexdigest()
+    return result
+
+
+def cached_report_matches(task, match_folder):
+    report = task.get('report')
+    fingerprints = task.get('report_fingerprints')
+    if not isinstance(report, str) or not isinstance(fingerprints, dict):
+        return False
+    try:
+        path = Path(report).resolve(strict=True)
+        return (path.name == 'index.html' and path.parent.parent == match_folder
+                and report_fingerprints(path.parent) == fingerprints)
+    except (OSError, ValueError, RuntimeError):
+        return False
+
+
 def run_task(task, *, root=ROOT, config=None, heartbeat=lambda _: None, check=guard):
     root = Path(root).resolve(); config = config or {}
     roots = history_roots(root / 'config/history.local.json')
     mid = task['match_id']; refuse_locked_match(mid); check()
     admitted = inputs(root, roots, mid)
     source = replay_path(task, config.get('replay_directories', []))
+    source_sha = source_stamp = replay_error = None
+    if source is not None and admitted['equipment']:
+        try:
+            source_sha, source_stamp = stable_digest(source, 1024**3, check)
+        except InterruptedError:
+            raise
+        except (OSError, ValueError) as exc:
+            replay_error = exc
     signature = hashlib.sha256(json.dumps({'inputs': admitted, 'source':
-        [str(source), source.stat().st_size, source.stat().st_mtime_ns] if source else None,
+        [str(source), source_sha] if source else None,
         'workflow_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        'version': 1}, sort_keys=True).encode()).hexdigest()
-    if signature == task.get('input_signature') and task.get('report'):
-        return task
-    output = checked_output(root, root / 'diagnostics/automatic-economy/matches' / mid / uuid.uuid4().hex)
+        'version': 3}, sort_keys=True).encode()).hexdigest()
+    match_folder = root / 'diagnostics/automatic-economy/matches' / mid
+    if (replay_error is None and signature == task.get('input_signature') and task.get('error') is None
+            and task.get('state') in {'waiting_replay', 'waiting_sources_or_comparable_records',
+                                      'review_complete_evidence_only'}
+            and cached_report_matches(task, match_folder)):
+        if task.get('archive') is None and task['state'] != 'review_complete_evidence_only':
+            return task
+        cached = ready_archive(root, task.get('archive'), mid, source_sha, check, allow_window=True)
+        if (cached is not None and cached[1] == task.get('archive_fingerprints')
+                and file_stamp(source.stat()) == source_stamp):
+            return task
+    output = checked_output(root, match_folder / uuid.uuid4().hex)
     output.mkdir(parents=True)
     heartbeat('reviewing_records')
     records = record_review(root, roots, admitted, output, check)
     result = {'match_id': mid, 'source_packages': admitted, 'records': records, 'archive': None,
         'replay_comparisons': [], 'download_state': task.get('download_state'), 'replay_available': source is not None}
+    fingerprints = None
     if source is not None and admitted['equipment']:
         archive = output / 'archive'
         try:
-            archive = reusable_archive(root, mid, source, task, config) or archive
-            if archive == output / 'archive':
+            if replay_error is not None:
+                raise replay_error
+            reused = reusable_archive(root, mid, source_sha, task, config, check)
+            if file_stamp(source.stat()) != source_stamp:
+                raise ValueError('automatic_replay_input_changed')
+            if reused is None:
                 parse_replay(root, source, archive, heartbeat, check)
+                fingerprints = archive_fingerprints(archive, mid, source_sha, check, allow_window=True)
+            else:
+                archive, fingerprints = reused
             check(); heartbeat('comparing_equipment')
             result['replay_comparisons'] = compare_replay(roots, admitted, archive, output, check, root)
+            if (archive_fingerprints(archive, mid, source_sha, check, allow_window=True) != fingerprints
+                    or file_stamp(source.stat()) != source_stamp):
+                raise ValueError('automatic_replay_comparison_source_changed')
             result['archive'] = str(archive)
         except (ValueError, OSError, InterruptedError, TimeoutError) as exc:
             # The records stage is useful even when DEM parsing fails or a
             # new game interrupts it. Never lose it behind a replay dependency.
-            result.update(state='replay_review_failed', state_label='记录已复查，录像复查待重试',
+            result.update(state='replay_review_failed', state_label='记录已复查，录像复查待重试', replay_comparisons=[],
                 replay_error=type(exc).__name__)
             publish(output, result)
             return {**task, 'state': 'replay_review_failed', 'error': type(exc).__name__,
@@ -346,4 +478,6 @@ def run_task(task, *, root=ROOT, config=None, heartbeat=lambda _: None, check=gu
         'waiting_replay':'记录已复查，缺同场录像', 'waiting_sources_or_comparable_records':'闭合来源或可比记录未齐'}[state])
     check(); publish(output, result)
     return {**task, 'state': state, 'input_signature': signature, 'report': str(output / 'index.html'),
+        'report_fingerprints': report_fingerprints(output),
+        'archive_fingerprints': fingerprints,
         'archive': result['archive'], 'reviewed_at_utc': result['generated_at_utc'], 'error': None}

@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from dota2_insights.history import checked_input,checked_output
 from dota2_insights.map_render_geometry import world_node,terrain_instances,select_instances,source_positions,SharedVertices
 from dota2_insights.valve_resources import directory_bytes,read_vpk_directory,_read_resource
-from tools.extract_map_collision import guard,decode,digest,DECODER_SHA256
+from tools.extract_map_collision import guard,decode,digest,REVIEWED_DECODER_SHA256
 
 
 def export(decoder,compiled,output):
@@ -35,17 +35,26 @@ def export(decoder,compiled,output):
                 child.terminate()
                 try:child.wait(timeout=3)
                 except subprocess.TimeoutExpired:child.kill();child.wait(timeout=3)
-    document=json.loads((output/'mesh.gltf').read_text(encoding='utf-8'))
-    if document.get('buffers')!=[{'byteLength':(output/'mesh.bin').stat().st_size,'uri':'mesh.bin'}]:
+    layouts=(output/'mesh.gltf',output/'mesh'/f'{compiled.stem}.gltf')
+    documents=[path for path in layouts if path.is_file()]
+    if len(documents)!=1:
+        raise ValueError('render_export_single_document_required')
+    document_path=documents[0]
+    buffer_path=document_path.with_suffix('.bin')
+    document_bytes=document_path.read_bytes()
+    document=json.loads(document_bytes)
+    if not buffer_path.is_file() or document.get('buffers')!=[{
+        'byteLength':buffer_path.stat().st_size,'uri':buffer_path.name}]:
         raise ValueError('render_export_single_local_buffer_required')
-    return document,(output/'mesh.bin').read_bytes()
+    return document_bytes,buffer_path.read_bytes()
 
 
 def run(game,decoder,collision,output):
     guard();game=Path(game).resolve(strict=True);decoder=Path(decoder).resolve(strict=True)
     collision=checked_input(ROOT,collision);output=checked_output(ROOT,output)
     if output.exists():raise ValueError('new_render_geometry_output_required')
-    if digest(decoder)!=DECODER_SHA256:raise ValueError('unreviewed_render_decoder')
+    decoder_sha=digest(decoder)
+    if decoder_sha not in REVIEWED_DECODER_SHA256:raise ValueError('unreviewed_render_decoder')
     report_sha=digest(collision)
     if (collision.parent/'COMPLETE').read_text(encoding='ascii').strip()!=report_sha:
         raise ValueError('render_collision_receipt')
@@ -82,10 +91,9 @@ def run(game,decoder,collision,output):
         decode(decoder,compiled,folder/'MDAT.repeat.txt',block='MDAT')
         if digest(folder/'MDAT.txt')!=digest(folder/'MDAT.repeat.txt'):raise ValueError('render_mesh_decode_not_repeatable')
         document,buffer=export(decoder,compiled,folder/'first')
-        export(decoder,compiled,folder/'repeat')
-        for name in ('mesh.gltf','mesh.bin'):
-            if digest(folder/'first'/name)!=digest(folder/'repeat'/name):raise ValueError('render_gltf_not_repeatable')
-        vertices,bounds=source_positions(document,buffer,(folder/'MDAT.txt').read_text(encoding='utf-8-sig'))
+        if (document,buffer)!=export(decoder,compiled,folder/'repeat'):
+            raise ValueError('render_gltf_not_repeatable')
+        vertices,bounds=source_positions(json.loads(document),buffer,(folder/'MDAT.txt').read_text(encoding='utf-8-sig'))
         rows.append({**instance,**bounds,**shared.compare(vertices)})
     guard()
     if directory_bytes(source)!=raw or digest(collision)!=report_sha or digest(archive)!=archive_sha:
@@ -93,7 +101,7 @@ def run(game,decoder,collision,output):
     files={p.relative_to(output).as_posix():digest(p) for p in output.rglob('*') if p.is_file()}
     result={'schema_version':1,'kind':'render_collision_frame_comparison','map_asset_sha256':hashlib.sha256(raw).hexdigest(),
         'world_node':placement,'available_terrain_instances':len(instances),'rows':rows,'source_files':files,
-        'source_assets':assets,'decoder_sha256':DECODER_SHA256,'collision_report_sha256':report_sha,
+        'source_assets':assets,'decoder_sha256':decoder_sha,'collision_report_sha256':report_sha,
         'collision_archive_sha256':archive_sha,'source_unchanged':True,'repeated_export_bytes_equal':True,
         'code_sha256':{name:digest(ROOT/name) for name in ['dota2_insights/map_render_geometry.py','tools/compare_map_render_geometry.py','tools/extract_map_collision.py']},
         'meaning':'same_asset_static_vertex_frame_evidence_not_independent_runtime_or_height_validation',

@@ -150,7 +150,11 @@ def review(folder, expected_package_id=None, *, source_budget=None):
             ref = document['sources']['frames.csv']
             if parsed['source_sha256'] != ref['sha256'] or parsed['source_bytes'] != ref['bytes']:
                 raise ValueError('performance_match_csv_changed')
-            result.update(streams=parsed, status='available')
+            result.update(streams=parsed, status='available' if parsed['streams'] else 'no_attributable_frame_rows')
+            from .workload_qpc import review_overlap
+            result['workload_overlap'] = review_overlap(contexts, scope=bound, frequency=frequency,
+                windows=windows, examples=parsed['long_interval_examples'],
+                helper_process_id=capture.get('helper_pid'))
     return {'capture_run_id': document['capture_run_id'], 'matches': [result],
             'source_files': document['sources'],
             'unavailable': [], 'source_verified_before_and_after': True,
@@ -167,6 +171,15 @@ def render_markdown(reports, skipped, *, index_state):
         text += '\n本次索引没有逐局性能包；不代表没有游戏帧。\n'
     for report in reports:
         text += f"\n采集 {report['capture_run_id']}："+('与旧闭合报告重合，不计为新增采样。' if report['also_in_closed_launcher_scope'] else '已复验独立逐局包。')+'\n'
+        for match in report.get('matches', []):
+            workload = match.get('workload_overlap') or {}
+            if workload.get('eligible_spans') and workload.get('long_interval_examples'):
+                text += f"\n已核对 {workload['eligible_spans']} 个原生QPC处理阶段区间；只核对记录到的长帧示例，不作掉帧归因。\n"
+                for event in workload['long_interval_examples']:
+                    parts = [f"{s['stage']} {s['overlap_ms']:.3f}ms" for s in event['stages']]
+                    text += f"\nCSV第 {event['csv_data_row']} 行重合：" + ('、'.join(parts) if parts else '未记录到重合，不能据此排除助手工作') + '。\n'
+            elif workload.get('excluded', {}).get('helper_process_not_bound_to_capture'):
+                text += '\n部分工作记录缺少已核验的助手进程绑定，无法对齐这些记录。\n'
     if skipped:
         text += f'\n{len(skipped)}份逐局性能包不可用，不作为零FPS；原因见JSON。\n'
     return text
