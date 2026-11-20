@@ -1,8 +1,13 @@
-"""Bake a compact 2D ground & camera height grid from verified map collision meshes.
+"""Bake a compact 2D walkable ground height grid from verified map collision meshes.
 
-This turns a 286k-triangle collision mesh (~10 MB) into a ~260 KB 512x512 float16
-lookup table for O(1) runtime ground-Z and Dota 2 smoothed camera-Z queries, paired
-with the empirically verified Dota 2 3D pinhole camera optics.
+This turns a collision mesh archive (~10 MB) into a ~260 KB 512x512 float16
+lookup table (`ground_z` and Gaussian-smoothed `smooth_ground_z`) bound to
+`map_asset_sha256`.
+
+No camera optics (pitch, FOV, roll, principal point, camera distance, or ground Z)
+are hardcoded here. Optional camera optics may ONLY be embedded from a validated
+`native_camera_calibration.py` (`fit` / `fit_orientation`) conditional candidate
+artifact that passes the scaled 2px fit RMS / 4px check max-error anchor gate.
 """
 
 from __future__ import annotations
@@ -17,24 +22,127 @@ import cv2
 import numpy as np
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 KIND = "ward_ground_height_grid"
 DEFAULT_GRID_SIZE = 512
 DEFAULT_BOUNDS = (-9472.0, 9472.0)
 
-# Empirically verified across 6983 full-map archived frames (Radiant fountain z=393,
-# Wisdom shrine x=-7978, Mid river z=0, Mid T1/T2 z=128, Dire top rax z=256).
-DOTA_CAMERA_OPTICS = {
-    "vfov_degrees": 66.1,
-    "pitch_degrees": 60.0,
-    "roll_degrees": 0.0,
-    "default_yaw_degrees": 90.0,
-    "principal_point_fraction": [0.5, 0.5],
-    "camera_distance_world_units": 1200.0,
-    "camera_height_offset_world_units": 1041.0,
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+CALIBRATION_VERSIONS = {
+    "native_position_anchor_calibration_v1",
+    "native_orientation_anchor_calibration_v1",
 }
 
-SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+def optics_from_calibration(calibration_path: Path | str) -> tuple[dict, dict]:
+    """Validate a `native_camera_calibration.py` conditional candidate and extract optics.
+
+    Re-checks the documented anchor count and scaled 2px/4px reprojection thresholds;
+    rejects any candidate that failed or did not pass independent check anchors.
+    """
+    path = Path(calibration_path).resolve(strict=True)
+    if path.stat().st_size > 1024 * 1024:
+        raise ValueError("calibration_candidate_size_limit")
+    raw = path.read_bytes()
+    cal_sha = hashlib.sha256(raw).hexdigest()
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise ValueError("calibration_candidate_invalid")
+
+    version = data.get("version")
+    if version not in CALIBRATION_VERSIONS:
+        raise ValueError("calibration_candidate_version")
+    if data.get("status") != "conditional_candidate":
+        raise ValueError("calibration_candidate_not_accepted")
+
+    viewport = data.get("native_viewport")
+    if (
+        not isinstance(viewport, list)
+        or len(viewport) != 2
+        or any(type(v) is not int for v in viewport)
+        or not (640 <= viewport[0] <= 4096 and 480 <= viewport[1] <= 2160)
+    ):
+        raise ValueError("calibration_candidate_viewport")
+    width, height = viewport
+    scale = height / 1080.0
+
+    fit_count = data.get("fit_anchor_count")
+    check_count = data.get("check_anchor_count")
+    fit_rms = data.get("fit_rms_px")
+    check_max = data.get("check_max_error_px")
+    if (
+        type(fit_count) is not int
+        or type(check_count) is not int
+        or fit_count < 6
+        or check_count < 4
+        or type(fit_rms) not in (int, float)
+        or type(check_max) not in (int, float)
+        or not (math.isfinite(fit_rms) and math.isfinite(check_max))
+        or fit_rms > 2.0 * scale
+        or check_max > 4.0 * scale
+    ):
+        raise ValueError("calibration_candidate_failed_anchor_gate")
+
+    vfov = data.get("vertical_fov_candidate_degrees")
+    if version == "native_position_anchor_calibration_v1":
+        pitch = data.get("pitch_candidate_degrees")
+        roll = 0.0
+    else:
+        pitch = data.get("pitch_from_reported_direction_degrees")
+        roll = data.get("clockwise_image_roll_candidate_degrees")
+
+    if (
+        type(vfov) not in (int, float)
+        or not (math.isfinite(vfov) and 10.0 < float(vfov) < 150.0)
+        or type(pitch) not in (int, float)
+        or not (math.isfinite(pitch) and 30.001 < float(pitch) < 79.999)
+        or type(roll) not in (int, float)
+        or not (math.isfinite(roll) and -45.0 <= float(roll) <= 45.0)
+    ):
+        raise ValueError("calibration_candidate_optics_out_of_bounds")
+
+    yaw_raw = data.get("yaw_xy_degrees")
+    default_yaw = float(yaw_raw) if type(yaw_raw) in (int, float) and math.isfinite(yaw_raw) else None
+
+    # Derive camera height offset / distance ONLY if explicitly present in calibration candidate.
+    camera_xyz = data.get("camera_xyz")
+    look_at_z = data.get("look_at_z_candidate")
+    height_offset = None
+    camera_distance = None
+    if (
+        isinstance(camera_xyz, list)
+        and len(camera_xyz) == 3
+        and all(type(v) in (int, float) and math.isfinite(v) for v in camera_xyz)
+        and type(look_at_z) in (int, float)
+        and math.isfinite(look_at_z)
+    ):
+        dz = float(camera_xyz[2]) - float(look_at_z)
+        if dz > 10.0:
+            height_offset = dz
+            camera_distance = dz / math.sin(math.radians(float(pitch)))
+
+    optics = {
+        "vfov_degrees": float(vfov),
+        "pitch_degrees": float(pitch),
+        "roll_degrees": float(roll),
+        "principal_point_fraction": [((width - 1) / 2.0) / width, ((height - 1) / 2.0) / height],
+        "default_yaw_degrees": default_yaw,
+        "camera_distance_world_units": camera_distance,
+        "camera_height_offset_world_units": height_offset,
+    }
+    provenance = {
+        "calibration_version": version,
+        "calibration_status": "conditional_candidate",
+        "calibration_sha256": cal_sha,
+        "native_viewport": [width, height],
+        "fit_anchor_count": fit_count,
+        "check_anchor_count": check_count,
+        "fit_rms_px": float(fit_rms),
+        "check_max_error_px": float(check_max),
+        "live_usable": False,
+        "coordinate_accuracy_verified": False,
+    }
+    return optics, provenance
 
 
 def rasterize_height_grid(
@@ -43,11 +151,11 @@ def rasterize_height_grid(
     *,
     grid_size: int = DEFAULT_GRID_SIZE,
     bounds: tuple[float, float] = DEFAULT_BOUNDS,
-    camera_smooth_sigma_cells: float = 14.0,
+    smooth_sigma_cells: float = 14.0,
     min_normal_z: float = 0.5,
     z_range: tuple[float, float] = (-128.0, 600.0),
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Rasterize walkable top-surface collision triangles into (ground_z, camera_z) float32 grids."""
+    """Rasterize walkable top-surface collision triangles into (ground_z, smooth_ground_z) float32 grids."""
     if type(grid_size) is not int or not 64 <= grid_size <= 2048:
         raise ValueError("height_grid_size")
     lo, hi = bounds
@@ -87,12 +195,11 @@ def rasterize_height_grid(
         vy, vx = np.where(~missing)
         ground_z[missing] = ground_z[vy[labels[missing] - 1], vx[labels[missing] - 1]]
 
-    if camera_smooth_sigma_cells > 0:
-        smooth_z = cv2.GaussianBlur(ground_z, (0, 0), sigmaX=float(camera_smooth_sigma_cells))
+    if smooth_sigma_cells > 0:
+        smooth_ground_z = cv2.GaussianBlur(ground_z, (0, 0), sigmaX=float(smooth_sigma_cells))
     else:
-        smooth_z = ground_z.copy()
-    camera_z = smooth_z + float(DOTA_CAMERA_OPTICS["camera_height_offset_world_units"])
-    return ground_z.astype(np.float32), camera_z.astype(np.float32)
+        smooth_ground_z = ground_z.copy()
+    return ground_z.astype(np.float32), smooth_ground_z.astype(np.float32)
 
 
 def sample_bilinear(grid: np.ndarray, x: float, y: float, bounds: tuple[float, float] = DEFAULT_BOUNDS) -> float:
@@ -117,17 +224,21 @@ def export_height_grid(
     collision_dir: Path,
     output_dir: Path,
     *,
+    calibration_path: Path | None = None,
     prefix: str = "ward-height-grid.local",
     grid_size: int = DEFAULT_GRID_SIZE,
     bounds: tuple[float, float] = DEFAULT_BOUNDS,
     overwrite: bool = False,
 ) -> dict:
-    """Export compressed float16 height grid + JSON profile bound to map_asset_sha256."""
+    """Export compressed float16 height grid + JSON profile bound to map_asset_sha256.
+
+    Optics are omitted (`None`) unless a validated `native_camera_calibration.py`
+    conditional candidate artifact is supplied via `calibration_path`.
+    """
     collision_dir = Path(collision_dir).resolve(strict=True)
     meta_path = collision_dir / "collision.json"
     archive_path = collision_dir / "meshes.npz"
-    meta_raw = meta_path.read_bytes()
-    meta = json.loads(meta_raw)
+    meta = json.loads(meta_path.read_bytes())
     map_sha = meta.get("map_asset_sha256")
     if not isinstance(map_sha, str) or not SHA256_RE.fullmatch(map_sha):
         raise ValueError("height_grid_invalid_map_sha256")
@@ -136,11 +247,16 @@ def export_height_grid(
     if meta.get("mesh_archive_sha256") != archive_sha:
         raise ValueError("height_grid_collision_archive_mismatch")
 
+    optics = None
+    provenance = None
+    if calibration_path is not None:
+        optics, provenance = optics_from_calibration(calibration_path)
+
     with np.load(archive_path, allow_pickle=False) as meshes:
         verts = meshes["vertices_0"]
         tris = meshes["triangles_0"]
 
-    ground_z, camera_z = rasterize_height_grid(verts, tris, grid_size=grid_size, bounds=bounds)
+    ground_z, smooth_ground_z = rasterize_height_grid(verts, tris, grid_size=grid_size, bounds=bounds)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -154,7 +270,7 @@ def export_height_grid(
     np.savez_compressed(
         npz_path,
         ground_z=ground_z.astype(np.float16),
-        camera_z=camera_z.astype(np.float16),
+        smooth_ground_z=smooth_ground_z.astype(np.float16),
     )
     npz_sha = hashlib.sha256(npz_path.read_bytes()).hexdigest()
     manifest = {
@@ -167,9 +283,10 @@ def export_height_grid(
         "grid_sha256": npz_sha,
         "grid_size": grid_size,
         "world_bounds_xy": [float(bounds[0]), float(bounds[1])],
-        "optics": dict(DOTA_CAMERA_OPTICS),
+        "optics": optics,
+        "calibration_provenance": provenance,
         "ground_z_range": [round(float(ground_z.min()), 2), round(float(ground_z.max()), 2)],
-        "camera_z_range": [round(float(camera_z.min()), 2), round(float(camera_z.max()), 2)],
+        "smooth_ground_z_range": [round(float(smooth_ground_z.min()), 2), round(float(smooth_ground_z.max()), 2)],
     }
     json_path.write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     return manifest
