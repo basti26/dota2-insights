@@ -12,6 +12,9 @@ from pathlib import Path
 from .replay_holdout import refuse_locked_match
 
 VALID_WARD_TYPES = ("observer", "sentry")
+TEAM_KEYS = {2: "radiant", 3: "dire"}
+PHASE_EARLY_END_S = 600.0
+PHASE_MID_END_S = 1800.0
 DEFAULT_CLUSTER_RADIUS_WU = 130.0
 
 
@@ -93,7 +96,7 @@ def build_aggregated_pack(
 
     match_ids: list[str] = []
     seen_matches: set[str] = set()
-    by_type: dict[str, list[dict]] = {k: [] for k in VALID_WARD_TYPES}
+    by_team_type: dict[tuple[str, str], list[dict]] = {}
     source_hashes: dict[str, dict[str, str]] = {}
     total_source_wards = 0
     unavailable_count = 0
@@ -125,12 +128,14 @@ def build_aggregated_pack(
             ):
                 unavailable_count += 1
                 continue
-            by_type[wtype].append({
+            team_key = TEAM_KEYS.get(w.get("team"), "unknown")
+            by_team_type.setdefault((team_key, wtype), []).append({
                 "match_id": mid,
                 "x": float(x),
                 "y": float(y),
                 "ward_type": wtype,
                 "team": w.get("team"),
+                "team_key": team_key,
                 "placed_game_time_s": w.get("placed_game_time_s"),
             })
 
@@ -139,39 +144,55 @@ def build_aggregated_pack(
     raw_points: list[dict] = []
     tag = str(league_id) if league_id is not None else "pro"
 
-    for wtype in VALID_WARD_TYPES:
-        clusters = _greedy_cluster(by_type[wtype], cluster_radius_wu)
-        clusters.sort(key=lambda c: (-len(c), -len({m["match_id"] for m in c}), c[0]["x"], c[0]["y"]))
-        for idx, members in enumerate(clusters):
-            count = len(members)
-            if count < min_count:
+    for team_key in ("radiant", "dire", "unknown"):
+        for wtype in VALID_WARD_TYPES:
+            rows = by_team_type.get((team_key, wtype))
+            if not rows:
                 continue
-            cx = sum(m["x"] for m in members) / count
-            cy = sum(m["y"] for m in members) / count
-            distinct_matches = sorted({m["match_id"] for m in members}, key=int)
-            m_count = len(distinct_matches)
-            early = sum(
-                1 for m in members
-                if type(m.get("placed_game_time_s")) in (int, float) and m["placed_game_time_s"] <= 600.0
-            )
-            mid_late = count - early
-            radiant = sum(1 for m in members if m.get("team") == 2)
-            dire = sum(1 for m in members if m.get("team") == 3)
-            raw_points.append({
-                "id": f"pro:{tag}:{wtype}:{idx}",
-                "x": round(cx, 2),
-                "y": round(cy, 2),
-                "ward_type": wtype,
-                "tree_clearance": "unknown",
-                "tree_evidence": None,
-                "count": count,
-                "match_count": m_count,
-                "frequency": round(m_count / total_matches, 4),
-                "early_count": early,
-                "mid_late_count": mid_late,
-                "team_counts": {"radiant": radiant, "dire": dire},
-                "source_matches": distinct_matches,
-            })
+            clusters = _greedy_cluster(rows, cluster_radius_wu)
+            clusters.sort(key=lambda c: (-len(c), -len({m["match_id"] for m in c}), c[0]["x"], c[0]["y"]))
+            for idx, members in enumerate(clusters):
+                count = len(members)
+                if count < min_count:
+                    continue
+                cx = sum(m["x"] for m in members) / count
+                cy = sum(m["y"] for m in members) / count
+                distinct_matches = sorted({m["match_id"] for m in members}, key=int)
+                m_count = len(distinct_matches)
+                times = sorted(
+                    float(m["placed_game_time_s"])
+                    for m in members
+                    if type(m.get("placed_game_time_s")) in (int, float)
+                    and math.isfinite(m["placed_game_time_s"])
+                )
+                early = sum(1 for t in times if t < PHASE_EARLY_END_S)
+                mid_cnt = sum(1 for t in times if PHASE_EARLY_END_S <= t < PHASE_MID_END_S)
+                late = sum(1 for t in times if t >= PHASE_MID_END_S)
+                phase_counts = {"early": early, "mid": mid_cnt, "late": late}
+                active_phases = [p for p in ("early", "mid", "late") if phase_counts[p] > 0]
+                median_time_s = round(times[len(times) // 2], 1) if times else None
+                radiant = sum(1 for m in members if m.get("team") == 2)
+                dire = sum(1 for m in members if m.get("team") == 3)
+                point = {
+                    "id": f"pro:{tag}:{team_key}:{wtype}:{idx}",
+                    "x": round(cx, 2),
+                    "y": round(cy, 2),
+                    "ward_type": wtype,
+                    "team": None if team_key == "unknown" else team_key,
+                    "tree_clearance": "unknown",
+                    "tree_evidence": None,
+                    "count": count,
+                    "match_count": m_count,
+                    "frequency": round(m_count / total_matches, 4),
+                    "early_count": early,
+                    "mid_late_count": mid_cnt + late,
+                    "phase_counts": phase_counts,
+                    "phases": active_phases,
+                    "median_time_s": median_time_s,
+                    "team_counts": {"radiant": radiant, "dire": dire},
+                    "source_matches": distinct_matches,
+                }
+                raw_points.append(point)
 
     raw_points.sort(key=lambda p: (-p["match_count"], -p["count"], p["id"]))
     points = raw_points[:max_points]

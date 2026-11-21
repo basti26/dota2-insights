@@ -43,16 +43,23 @@ class ProWardPackTests(unittest.TestCase):
         self.assertEqual(pack["aggregated_match_count"], 2)
         self.assertEqual(pack["source_replay_game_build"], 6986)
         self.assertEqual(pack["unavailable_count"], 1)
-        # Expect 2 observer clusters (hotspot + remote) and 1 sentry cluster
-        self.assertEqual(len(pack["points"]), 3)
+        # Expect Radiant & Dire clustered separately:
+        # 1 radiant obs (count=2), 2 dire obs (hotspot + remote), 1 radiant sentry
+        self.assertEqual(len(pack["points"]), 4)
         top = pack["points"][0]
         self.assertEqual(top["ward_type"], "observer")
-        self.assertEqual(top["count"], 3)
+        self.assertEqual(top["team"], "radiant")
+        self.assertEqual(top["count"], 2)
         self.assertEqual(top["match_count"], 2)
         self.assertAlmostEqual(top["frequency"], 1.0)
+        self.assertEqual(top["phase_counts"], {"early": 2, "mid": 0, "late": 0})
+        self.assertEqual(top["phases"], ["early"])
         self.assertEqual(top["early_count"], 2)
-        self.assertEqual(top["mid_late_count"], 1)
-        self.assertEqual(top["team_counts"], {"radiant": 2, "dire": 1})
+        self.assertEqual(top["mid_late_count"], 0)
+        self.assertEqual(top["team_counts"], {"radiant": 2, "dire": 0})
+        dire_obs = [p for p in pack["points"] if p["team"] == "dire" and p["ward_type"] == "observer"]
+        self.assertEqual(len(dire_obs), 2)
+        self.assertTrue(all(p["phase_counts"]["mid"] == 1 for p in dire_obs))
 
     def test_rejects_incomplete_or_tampered_match(self):
         m_ok = _make_match("9097783398", [
