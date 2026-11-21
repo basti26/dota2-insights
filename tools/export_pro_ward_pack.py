@@ -25,6 +25,8 @@ def main() -> int:
     cli.add_argument("--min-count", type=int, default=1, help="Minimum placements per cluster")
     cli.add_argument("--max-points", type=int, default=400, help="Maximum clustered spots to emit")
     cli.add_argument("--output", type=Path, required=True, help="Output JSON path")
+    cli.add_argument("--sync-minimap-config", type=Path, default=None,
+                     help="Optional ward-minimap.local.json path to sync packet_sha256 & client_build")
     args = cli.parse_args()
 
     bridge = Bridge()
@@ -44,6 +46,17 @@ def main() -> int:
     tmp.write_bytes(raw)
     tmp.replace(args.output)
     digest = hashlib.sha256(raw).hexdigest()
+    minimap_synced = False
+    if args.sync_minimap_config is not None and args.sync_minimap_config.is_file():
+        mm = json.loads(args.sync_minimap_config.read_bytes())
+        mm["packet_sha256"] = digest
+        if type(args.game_build) is int and args.game_build > 0:
+            mm["client_build"] = args.game_build
+            mm.pop("same_asset_compatible_build", None)
+        mm_tmp = args.sync_minimap_config.with_suffix(".json.tmp")
+        mm_tmp.write_text(json.dumps(mm, indent=2) + "\n", encoding="utf-8")
+        mm_tmp.replace(args.sync_minimap_config)
+        minimap_synced = True
     print(json.dumps({
         "output": str(args.output),
         "league_id": args.league_id,
@@ -58,6 +71,7 @@ def main() -> int:
             for p in packet["points"][:5]
         ],
         "packet_sha256": digest,
+        "minimap_synced": minimap_synced,
     }, ensure_ascii=False, indent=2))
     return 0
 
