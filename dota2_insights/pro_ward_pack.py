@@ -196,8 +196,31 @@ def build_aggregated_pack(
                 }
                 raw_points.append(point)
 
-    raw_points.sort(key=lambda p: (-p["match_count"], -p["count"], p["id"]))
-    points = raw_points[:max_points]
+    # Sort by frequency & count, and allocate max_points fairly across teams so
+    # alphabetical ID tie-breaking ('dire' < 'radiant') never starves one side.
+    sort_key = lambda p: (-p["match_count"], -p["count"], p["id"])
+    by_team_buckets: dict[str, list[dict]] = {}
+    for pt in raw_points:
+        by_team_buckets.setdefault(pt.get("team") or "unknown", []).append(pt)
+    for bucket in by_team_buckets.values():
+        bucket.sort(key=sort_key)
+    teams_present = [t for t in ("radiant", "dire", "unknown") if by_team_buckets.get(t)]
+    points: list[dict] = []
+    if len(teams_present) <= 1:
+        raw_points.sort(key=sort_key)
+        points = raw_points[:max_points]
+    else:
+        quota = max(1, max_points // len(teams_present))
+        leftovers: list[dict] = []
+        for t in teams_present:
+            b = by_team_buckets[t]
+            points.extend(b[:quota])
+            leftovers.extend(b[quota:])
+        if len(points) < max_points and leftovers:
+            leftovers.sort(key=sort_key)
+            points.extend(leftovers[: max_points - len(points)])
+        points.sort(key=sort_key)
+        points = points[:max_points]
 
     packet: dict = {
         "schema_version": 1,
