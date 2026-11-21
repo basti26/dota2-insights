@@ -52,14 +52,15 @@ class ProWardPackTests(unittest.TestCase):
         self.assertEqual(top["count"], 2)
         self.assertEqual(top["match_count"], 2)
         self.assertAlmostEqual(top["frequency"], 1.0)
-        self.assertEqual(top["phase_counts"], {"early": 2, "mid": 0, "late": 0})
-        self.assertEqual(top["phases"], ["early"])
+        self.assertEqual(top["phase_counts"], {"opening": 1, "laning": 1, "mid": 0, "late": 0})
+        self.assertEqual(top["phases"], ["opening", "laning"])
         self.assertEqual(top["early_count"], 2)
         self.assertEqual(top["mid_late_count"], 0)
         self.assertEqual(top["team_counts"], {"radiant": 2, "dire": 0})
         dire_obs = [p for p in pack["points"] if p["team"] == "dire" and p["ward_type"] == "observer"]
         self.assertEqual(len(dire_obs), 2)
-        self.assertTrue(all(p["phase_counts"]["mid"] == 1 for p in dire_obs))
+        self.assertEqual(sum(p["phase_counts"]["mid"] for p in dire_obs), 1)
+        self.assertEqual(sum(p["phase_counts"]["late"] for p in dire_obs), 1)
 
     def test_rejects_incomplete_or_tampered_match(self):
         m_ok = _make_match("9097783398", [

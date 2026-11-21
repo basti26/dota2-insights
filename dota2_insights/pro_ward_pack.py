@@ -13,8 +13,9 @@ from .replay_holdout import refuse_locked_match
 
 VALID_WARD_TYPES = ("observer", "sentry")
 TEAM_KEYS = {2: "radiant", 3: "dire"}
-PHASE_EARLY_END_S = 600.0
-PHASE_MID_END_S = 1800.0
+PHASE_OPENING_END_S = 270.0   # < 04:30 (initial 2 obs + 3 sen + 02:15 3rd obs; expires ~05-06m)
+PHASE_LANING_END_S = 720.0    # 04:30 .. 12:00 (1st replacement wave at 04:30 stock / 05:00 night)
+PHASE_MID_END_S = 1440.0      # 12:00 .. 24:00 (mid map control); >= 24:00 -> late (obs lasts to 30m+)
 DEFAULT_CLUSTER_RADIUS_WU = 130.0
 
 
@@ -165,11 +166,12 @@ def build_aggregated_pack(
                     if type(m.get("placed_game_time_s")) in (int, float)
                     and math.isfinite(m["placed_game_time_s"])
                 )
-                early = sum(1 for t in times if t < PHASE_EARLY_END_S)
-                mid_cnt = sum(1 for t in times if PHASE_EARLY_END_S <= t < PHASE_MID_END_S)
+                opening = sum(1 for t in times if t < PHASE_OPENING_END_S)
+                laning = sum(1 for t in times if PHASE_OPENING_END_S <= t < PHASE_LANING_END_S)
+                mid_cnt = sum(1 for t in times if PHASE_LANING_END_S <= t < PHASE_MID_END_S)
                 late = sum(1 for t in times if t >= PHASE_MID_END_S)
-                phase_counts = {"early": early, "mid": mid_cnt, "late": late}
-                active_phases = [p for p in ("early", "mid", "late") if phase_counts[p] > 0]
+                phase_counts = {"opening": opening, "laning": laning, "mid": mid_cnt, "late": late}
+                active_phases = [p for p in ("opening", "laning", "mid", "late") if phase_counts[p] > 0]
                 median_time_s = round(times[len(times) // 2], 1) if times else None
                 radiant = sum(1 for m in members if m.get("team") == 2)
                 dire = sum(1 for m in members if m.get("team") == 3)
@@ -184,7 +186,7 @@ def build_aggregated_pack(
                     "count": count,
                     "match_count": m_count,
                     "frequency": round(m_count / total_matches, 4),
-                    "early_count": early,
+                    "early_count": opening + laning,
                     "mid_late_count": mid_cnt + late,
                     "phase_counts": phase_counts,
                     "phases": active_phases,
